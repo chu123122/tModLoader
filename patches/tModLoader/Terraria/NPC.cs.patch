@@ -1183,7 +1183,7 @@
 +
 +			if (NPCID.Sets.ImmuneToWhipTags[type]) {
 +				for (int i = 0; i < buffImmune.Length; i++) {
-+					buffImmune[i] = BuffID.Sets.IsATagBuff[i];
++					buffImmune[i] |= BuffID.Sets.IsATagBuff[i];
 +				}
 +			}
 +
@@ -1199,7 +1199,7 @@
 +			// Apply all `GrantImmunityWith` in reverse (if vulnerable to OnFire, add vulnerability to OnFire3, keep in mind this is _all_ of the vulnerabilities in `[OnFire3]` list)
 +			for (int i = 0; i < BuffID.Sets.GrantImmunityWith.Length; i++) {
 +				var buffsToInherit = BuffID.Sets.GrantImmunityWith[i];
-+				if (buffsToInherit.Count > 0 && buffsToInherit.All(x => !buffImmune[i]))
++				if (buffsToInherit.Count > 0 && buffsToInherit.All(x => !buffImmune[x]))
 +					buffImmune[i] = false;
 +			}
 +
@@ -1283,17 +1283,21 @@
  			friendly = true;
  		}
  
-@@ -15971,6 +_,10 @@
- 			}
+@@ -15972,6 +_,14 @@
  		}
  
-+		// TODO: This is probably all wrong now, or needs to be split.
-+		float bossAdjustment = 1f; // Wrong, just for compilation.
-+		NPCLoader.ApplyDifficultyAndPlayerScaling(this, numPlayers, balance, bossAdjustment);
-+
  		lifeMax = (int)Math.Round((double)lifeMax * num);
++
++		// Vanilla now applies per-type master life reductions in ScaleStats_ByDifficulty_Tweaks.
++		// Mods still choose whether to apply balance and the common reduction to their own NPCs.
++		// Run after vanilla's multiplayer multiplier so hooks observe the finalized vanilla stats.
++		float bossAdjustment = type >= NPCID.Count
++			? Utils.Remap(difficulty, GameDifficultyLevel.Expert, GameDifficultyLevel.Master, 1f, (float)CommonMasterBossLifeReduction)
++			: 1f;
++		NPCLoader.ApplyDifficultyAndPlayerScaling(this, numPlayers, balance, bossAdjustment);
  	}
  
+ 	public static void GetStatScalingFactors(int numPlayers, out float balance, out float boost)
 @@ -16388,7 +_,7 @@
  		}
  		else if (!unlockedSlimeCopperSpawn && Main.npc.IndexInRange(npcIndex)) {
@@ -2724,12 +2728,15 @@
  	public void AddBuff(int type, int time, bool quiet = false)
  	{
  		if (buffImmune[type])
-@@ -75593,6 +_,9 @@
+@@ -75593,6 +_,12 @@
  		int num = -1;
  		for (int i = 0; i < maxBuffs; i++) {
  			if (buffType[i] == type) {
-+				if (BuffLoader.ReApply(type, this, time, i)) // TODO: Adjust this for proper syncing
++				if (BuffLoader.ReApply(type, this, time, i)) {
++					if (!quiet && Main.netMode == NetmodeID.Server)
++						NetMessage.SendData(MessageID.NPCBuffs, -1, -1, null, whoAmI);
 +					return;
++				}
 +
  				if (buffTime[i] >= time)
  					return;
@@ -2936,15 +2943,23 @@
  		if (wet) {
  			if (shimmerWet) {
  				gravity = 0.15f;
-@@ -77017,6 +_,8 @@
+@@ -77017,6 +_,7 @@
  					none.AddSuperNaturalRegeneration(24);
  			}
  
-+			NPCLoader.UpdateLifeRegen(this, ref num);
 +
  			if (none.BlockNaturalRegeneration && lifeRegen > 0)
  				lifeRegen = 0;
  
+@@ -77033,6 +_,8 @@
+ 			if (none.ExpectedDamagePerSecond != 0)
+ 				num = none.ExpectedDamagePerSecond;
+ 
++			// Apply Mod DoT after the vanilla tally so its damage display cannot overwrite the hook.
++			NPCLoader.UpdateLifeRegen(this, ref num);
+ 			lifeRegenCount += lifeRegen;
+ 			if (num == -1) {
+ 				int num5 = lifeRegenCount / -120;
 @@ -77349,12 +_,16 @@
  			if (buffType[i] == 324)
  				onFrostBurn2 = true;

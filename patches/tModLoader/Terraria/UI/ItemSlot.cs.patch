@@ -402,6 +402,25 @@
  				case 25:
  				case 27:
  				case 33:
+@@ -1204,17 +_,7 @@
+ 		if (!checkItem.accessory)
+ 			return false;
+ 
+-		if (flag) {
+-			if (CanEquipAccessoryInSlot(checkItem, vanity: false, AccSlots(player), slot))
+-				return !HasSameItemInSlot(checkItem, VanityAccSlots(player));
+-
+-			return false;
+-		}
+-
+-		if (CanEquipAccessoryInSlot(checkItem, vanity: true, VanityAccSlots(player), slot))
+-			return !HasSameItemInSlot(checkItem, AccSlots(player));
+-
+-		return false;
++		return !AccCheck_ForPlayer(player, player.armor.Concat(AccessorySlotLoader.ModSlotPlayer(player).exAccessorySlot).ToArray(), checkItem, slot);
+ 	}
+ 
+ 	public static int PickItemMovementAction(Item[] inv, int context, int slot, Item checkItem)
 @@ -1262,6 +_,11 @@
  				if (checkItem.type == 0 || CanEquipInArmorSlot(Main.LocalPlayer, checkItem, slot))
  					result = 1;
@@ -834,23 +853,101 @@
  			item = GetSharedLoadoutItem(context, slot, out var _);
  
  		if (!item.IsAir) {
-@@ -2839,7 +_,7 @@
+@@ -2793,7 +_,10 @@
  			if (success) {
  				Main.EquipPageSelected = 0;
- 				Item item = player.armor[targetSlot2];
--				AchievementsHelper.HandleOnEquip(player, item, num);
-+				AchievementsHelper.HandleOnEquip(player, item, num * Math.Sign(context));
- 				DisplayTransfer_TwoWay(inv, context, slot, player.armor, num, targetSlot2);
+ 				AchievementsHelper.HandleOnEquip(player, inv[slot], 12);
++				if (targetSlot < player.dye.Length)
+-				DisplayTransfer_TwoWay(inv, context, slot, player.dye, 12, targetSlot);
++					DisplayTransfer_TwoWay(inv, context, slot, player.dye, 12, targetSlot);
++				else
++					DisplayTransfer_TwoWay(inv, context, slot, AccessorySlotLoader.ModSlotPlayer(player).exDyesAccessory, Context.ModdedDyeSlot, targetSlot - player.dye.Length);
  			}
  		}
-@@ -2987,6 +_,7 @@
- 		return true;
- 	}
+ 		else if (Main.projHook[inv[slot].shoot]) {
+@@ -2838,9 +_,18 @@
+ 			inv[slot] = ArmorSwap(inv[slot], out success, out var targetSlot2);
+ 			if (success) {
+ 				Main.EquipPageSelected = 0;
++				if (targetSlot2 >= player.armor.Length) {
++					var modSlots = AccessorySlotLoader.ModSlotPlayer(player).exAccessorySlot;
++					int modSlot = targetSlot2 - player.armor.Length;
++					int modContext = modSlot < modSlots.Length / 2 ? Context.ModdedAccessorySlot : Context.ModdedVanityAccessorySlot;
++					AchievementsHelper.HandleOnEquip(player, modSlots[modSlot], num * Math.Sign(context));
++					DisplayTransfer_TwoWay(inv, context, slot, modSlots, modContext, modSlot);
++				}
++				else {
+-				Item item = player.armor[targetSlot2];
++					Item item = player.armor[targetSlot2];
+-				AchievementsHelper.HandleOnEquip(player, item, num);
++					AchievementsHelper.HandleOnEquip(player, item, num * Math.Sign(context));
+-				DisplayTransfer_TwoWay(inv, context, slot, player.armor, num, targetSlot2);
++					DisplayTransfer_TwoWay(inv, context, slot, player.armor, num, targetSlot2);
++				}
+ 			}
+ 		}
  
-+	//TML: I (Solxan), have not been able to get this to ever run in-game. I suspect this code path is deprecated.
+@@ -2989,27 +_,38 @@
+ 
  	private static Item DyeSwap(Item item, out bool success, out int targetSlot)
  	{
- 		targetSlot = -1;
+-		targetSlot = -1;
+ 		success = false;
++		targetSlot = -1;
+ 		if (item.dye <= 0)
+ 			return item;
+ 
+-		Player player = Main.player[Main.myPlayer];
+-		while (!player.IsItemSlotUnlockedAndUsable(dyeSwapCounter)) {
+-			dyeSwapCounter = (dyeSwapCounter + 1) % 10;
+-		}
++		Player player = Main.LocalPlayer;
++		var slots = AccessorySlotLoader.ModSlotPlayer(player);
++		var loader = LoaderManager.Get<AccessorySlotLoader>();
++		int nativeCount = player.dye.Length;
++		int count = nativeCount + slots.SlotCount;
++		bool CanUse(int i) => i < nativeCount ? player.IsItemSlotUnlockedAndUsable(i)
++			: loader.ModdedIsItemSlotUnlockedAndUsable(i - nativeCount, player) && loader.CanPlayerAcceptItem(player, i - nativeCount, item, Context.ModdedDyeSlot);
++		Item GetItem(int i) => i < nativeCount ? player.dye[i] : slots.exDyesAccessory[i - nativeCount];
+ 
+-		for (int i = 0; i < 10; i++) {
+-			if (player.IsItemSlotUnlockedAndUsable(i) && player.dye[i].IsAir) {
+-				dyeSwapCounter = i;
+-				break;
++		for (int i = 0; i < count; i++) {
++			if (CanUse(i) && GetItem(i).IsAir) { targetSlot = i; break; }
++		}
++		if (targetSlot == -1) {
++			for (int step = 0; step < count; step++) {
++				int i = (dyeSwapCounter + step) % count;
++				if (CanUse(i)) { targetSlot = i; break; }
+ 			}
+ 		}
++		if (targetSlot == -1)
++			return item;
+ 
+ 		SoundEngine.PlaySound(7);
+-		SwapClearFavorite(ref item, ref player.dye[dyeSwapCounter]);
+-		targetSlot = dyeSwapCounter;
+-		dyeSwapCounter = (dyeSwapCounter + 1) % 10;
++		if (targetSlot < nativeCount)
++			SwapClearFavorite(ref item, ref player.dye[targetSlot]);
++		else
++			SwapClearFavorite(ref item, ref slots.exDyesAccessory[targetSlot - nativeCount]);
++		dyeSwapCounter = (targetSlot + 1) % count;
+ 		success = true;
+ 		return item;
+ 	}
+@@ -3025,6 +_,9 @@
+ 			return item;
+ 
+ 		Player player = Main.player[Main.myPlayer];
++		if (item.accessory)
++			return QuickAccessorySwap(player, item, out success, out targetSlot);
++
+ 		if (item.headSlot != -1 || item.bodySlot != -1 || item.legSlot != -1) {
+ 			if (HasSameItemInSlot(item, ArmorSlots(player)) || HasSameItemInSlot(item, VanityArmorSlots(player)))
+ 				return item;
 @@ -3181,7 +_,7 @@
  
  	public static Color GetItemLight(ref Color currentColor, ref float scale, int type, bool outInTheWorld = false, float lightScalar = 1f)

@@ -13,7 +13,7 @@
  
  namespace Terraria.Utilities;
  
-@@ -53,10 +_,50 @@
+@@ -53,10 +_,53 @@
  	public static bool WriteException(Options options, string outputDirectory = ".") => Write(options, ExceptionInfo.Present, outputDirectory);
  	public static bool Write(Options options, string outputDirectory = ".") => Write(options, ExceptionInfo.None, outputDirectory);
  
@@ -57,7 +57,10 @@
  	private static string CreateDumpName()
  	{
  		DateTime dateTime = DateTime.Now.ToLocalTime();
-+		return string.Format("{0}_{1}_{2}_{3}.dmp", Main.dedServ ? "server" : "client", BuildInfo.versionTag, dateTime.ToString("MM-dd-yy_HH-mm-ss-ffff", CultureInfo.InvariantCulture), Thread.CurrentThread.ManagedThreadId);
++		string fileName = string.Format("{0}_{1}_{2}_{3}.dmp", Main.dedServ ? "server" : "client", BuildInfo.versionTag, dateTime.ToString("MM-dd-yy_HH-mm-ss-ffff", CultureInfo.InvariantCulture), Thread.CurrentThread.ManagedThreadId);
++		// Git branch names in versionTag may contain directory separators or other invalid filename characters.
++		char[] invalid = Path.GetInvalidFileNameChars();
++		return new string(fileName.Select(c => invalid.Contains(c) ? '_' : c).ToArray());
 +		/*
  		return string.Format("{0}_{1}_{2}_{3}.dmp", Main.dedServ ? "TerrariaServer" : "Terraria", Main.versionNumber, dateTime.ToString("MM-dd-yy_HH-mm-ss-ffff", CultureInfo.InvariantCulture), Thread.CurrentThread.ManagedThreadId);
 +		*/

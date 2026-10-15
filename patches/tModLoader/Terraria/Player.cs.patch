@@ -496,7 +496,7 @@
  	public int respawnTimer;
  	public static readonly int respawnTimerMax = 3600;
  	public static readonly int DeadSpectatingLockoutTime = 60;
-@@ -1077,17 +_,36 @@
+@@ -1077,17 +_,41 @@
  	public static readonly int DeadSkipLockoutTime = 90;
  	public long lastTimePlayerWasSaved;
  	public int attackCD;
@@ -528,6 +528,11 @@
 +	/// <br/><br/> Defaults to -1.
 +	/// </summary>
  	public int legs = -1;
++	/// <summary>
++	/// The visible coat equipment slot (<see cref="ArmorIDs.Body"/>). Usually corresponds to the <see cref="Item.coatSlot"/> of the visible accessory or vanity accessory.
++	/// <br/><br/> Coat textures use the body composite texture layout and are drawn over the equipped body armor.
++	/// <br/><br/> Defaults to -1.
++	/// </summary>
  	public int coat = -1;
 +	/* sbyte -> int
  	public sbyte handon = -1;
@@ -888,7 +893,7 @@
 +	*/
 +	internal ref StatModifier allKB => ref GetKnockback(DamageClass.Generic); //TML: New.
 +	internal ref float minionKB => ref GetKnockback(DamageClass.Summon).Base;
-+	
++
  	public int revolverCritChanceBonus;
 +	/*
  	public float meleeSpeed = 1f;
@@ -1206,9 +1211,11 @@
  	public int cLight;
  	public int cYorai;
  	public int cPortableStool;
-@@ -1748,7 +_,16 @@
+@@ -1747,8 +_,18 @@
+ 	public int cMinion;
  	public int cLeinShampoo;
  	public int cFlameWaker;
++	/// <summary>The armor shader ID applied to the <see cref="EquipType.Coat"/> equip texture by a dye item (<see cref="Item.dye"/>) in the dye slot.</summary>
  	public int cCoat;
 +	/// <summary>
 +	/// Provides efficient access to the number of projectiles of the specified type owned by this player currently active in the game world.<br/>
@@ -1571,6 +1578,16 @@
  	{
  		if (DebugOptions.LogItemUse)
  			Main.NewText("[" + Main.GameUpdateCount + "] ItemAnim (" + frames + ") use: " + itemTime + "/" + itemTimeMax);
+@@ -2836,7 +_,8 @@
+ 		itemAnimationMax = frames;
+ 	}
+ 
++	/// <summary> Sets the raw item animation length after applying a multiplier, with a minimum of one frame for positive base lengths. Use <see cref="ApplyItemAnimation(Item)"/> to run item use hooks and attack speed calculations. </summary>
+-	private void SetItemAnimation(int baseFrames, float multiplier)
++	public void SetItemAnimation(int baseFrames, float multiplier)
+ 	{
+ 		int val = (int)((float)baseFrames * multiplier);
+ 		if (baseFrames > 0)
 @@ -2845,8 +_,9 @@
  		SetItemAnimation(val);
  	}
@@ -1905,6 +1922,19 @@
  					item = inventory[i];
  					break;
  				}
+@@ -4429,12 +_,6 @@
+ 		if (noItems && !flag2)
+ 			return;
+ 
+-		if (mount.Active && !MountID.Sets.CanUseHooks[mount.Type])
+-			mount.TryDismount(this);
+-
+-		if (!ItemCheck_TryStartUse(item))
+-			return;
+-
+ 		int num2 = item.shoot;
+ 		int num3 = -1;
+ 		int num4 = 100000;
 @@ -4472,7 +_,10 @@
  		else if (num2 == 646) {
  			num7 = 4;
@@ -1916,7 +1946,7 @@
  			num7 = 1;
  			num8 = 1;
  		}
-@@ -4481,10 +_,20 @@
+@@ -4481,10 +_,25 @@
  			num8 = 2;
  		}
  
@@ -1933,6 +1963,11 @@
  			return;
  
 +		PostVanillaGrappleLimitCheck:
++
++		if (!ItemCheck_TryStartUse(item))
++			return;
++		if (mount.Active && !MountID.Sets.CanUseHooks[mount.Type])
++			mount.TryDismount(this);
 +
  		if (mount.Active && Mount.DismountsOnItemUse(mount.Type))
  			mount.TryEarlyDismount(this);
@@ -2363,6 +2398,20 @@
  			cWings = dyeItem.dye;
  
  		if (armorItem.type == 934)
+@@ -7656,8 +_,13 @@
+ 		if (armorItem.type == 3929)
+ 			cLeinShampoo = dyeItem.dye;
+ 
++		/* VanillaCode:
+ 		if (armorItem.type == 5587)
+ 			cCoat = dyeItem.dye;
++		*/
++		// TML: Apply the accessory dye to any vanilla or modded coat equipment texture.
++		if (armorItem.coatSlot > 0)
++			cCoat = dyeItem.dye;
+ 	}
+ 
+ 	public int ArmorSetDye()
 @@ -7674,12 +_,17 @@
  		}
  	}
@@ -3343,7 +3392,7 @@
  			}
  
  			ApplyMusicBox(currentItem);
-@@ -13017,6 +_,9 @@
+@@ -13017,17 +_,23 @@
  
  		if (currentItem.type == 6146)
  			musicBoxSilence = true;
@@ -3353,6 +3402,21 @@
  	}
  
  	public void UpdateArmorSets(int i)
+ 	{
+-		ArmorSetBonuses.GetCompleteSet(new ArmorSetBonus.QueryContext(this))?.Effect(this);
++		ArmorSetBonus armorSetBonus = ArmorSetBonuses.GetCompleteSet(new ArmorSetBonus.QueryContext(this));
++		ActiveArmorSetBonus = armorSetBonus;
++		armorSetBonus?.Effect?.Invoke(this);
+ 		UpdateArmorSets_Always_Beetle();
+ 		UpdateArmorSets_Always_Solar();
+ 		UpdateArmorSets_Always_Stardust();
+ 		UpdateArmorSets_Always_Chlorophyte();
+ 		UpdateArmorSets_Always_Vortex();
+ 		ApplyArmorSoundAndDustChanges();
++		ItemLoader.UpdateArmorSet(this, armorSetBonus, GetEffectiveArmor(0), GetEffectiveArmor(1), GetEffectiveArmor(2));
+ 	}
+ 
+ 	private void UpdateArmorSets_Always_Vortex()
 @@ -13387,6 +_,12 @@
  			HasGardenGnomeNearby = SceneMetrics.HasGardenGnome;
  		}
@@ -3402,11 +3466,12 @@
  	}
  
  	public void UpdateDead()
-@@ -13575,6 +_,7 @@
+@@ -13575,6 +_,8 @@
  		ResetFloorFlags();
  		wings = 0;
  		wingsLogic = 0;
 +		equippedWings = null; // Added by TML
++		ActiveArmorSetBonus = null;
  		hasWings = false;
  		ResetVisibleAccessories();
  		poisoned = false;
@@ -3665,14 +3730,15 @@
  		mysticSashDodge = false;
  		lavaMax = 0;
  		archery = false;
-@@ -15060,8 +_,10 @@
+@@ -15060,8 +_,11 @@
  		witheredWeapon = false;
  		parryDamageBuff = false;
  		slowOgreSpit = false;
 +		hasGemRobe = false; // Added by TML.
  		wings = 0;
  		wingsLogic = 0;
-+		equippedWings = null; // Added by TML.
++		equippedWings = null; // Added by TML
++		ActiveArmorSetBonus = null;
  		hasWings = false;
  		wingTimeMax = 0;
  		brokenArmor = false;
@@ -4988,7 +5054,7 @@
  				for (int i = 0; i < pylons.Count; i++) {
  					TeleportPylonInfo info = pylons[i];
  					if (TeleportPylonsMapLayer.IsRevealed(info))
-@@ -26454,7 +_,7 @@
+@@ -26454,12 +_,12 @@
  				Wiring.HitSwitch(myX, myY);
  				NetMessage.SendData(59, -1, -1, null, myX, myY);
  			}
@@ -4997,6 +5063,12 @@
  				flag2 = true;
  				SoundEngine.PlaySound(28, myX * 16, myY * 16, 0);
  				WorldGen.SwitchMB(myX, myY);
+ 			}
+-			else if (TileID.Sets.Campfires[tile.type]) {
++			else if (tile.type < TileID.Count && TileID.Sets.Campfires[tile.type]) {
+ 				flag2 = true;
+ 				SoundEngine.PlaySound(28, myX * 16, myY * 16, 0);
+ 				int num17 = 3;
 @@ -26584,7 +_,10 @@
  				flag2 = true;
  				GamepadEnableGrappleCooldown();
@@ -5286,6 +5358,17 @@
  		List<Item[]> list = new List<Item[]>();
  		Dictionary<int, List<int>> dictionary = new Dictionary<int, List<int>>();
  		List<Point> list2 = new List<Point>();
+@@ -29400,7 +_,10 @@
+ 
+ 	public void SetAdjTile(int tileType)
+ 	{
++		if (adjTile[tileType])
++			return;
+ 		adjTile[tileType] = true;
++		TileLoader.AdjTiles(this, tileType);
+ 		if (tileType == 355 || tileType == 699)
+ 			alchemyTable = true;
+ 
 @@ -29422,6 +_,8 @@
  		adjHoney = false;
  		oldAdjLava = adjLava;
@@ -5295,7 +5378,7 @@
  		alchemyTable = false;
  		Rectangle tileRegion = TileReachCheckSettings.Simple.GetTileRegion(this, ateArtisanBread ? 4 : 0);
  		tileRegion = WorldUtils.ClampToWorld(tileRegion);
-@@ -29432,6 +_,14 @@
+@@ -29432,6 +_,13 @@
  					SetAdjTile(tile.type);
  					if (TileID.Sets.CountsAsWaterForCrafting[tile.type])
  						adjWaterSource = true;
@@ -5306,7 +5389,6 @@
 +					if (TileID.Sets.CountsAsShimmerForCrafting[tile.type])
 +						adjShimmer = true;
 +
-+					// TODO: Move to SetAdjTile: TileLoader.AdjTiles(this, Main.tile[j, k].type);
  				}
  
  				if (tile.liquid > 200 && tile.liquidType() == 0)
@@ -5532,10 +5614,17 @@
  		if (item.type == 3581)
  			yoraiz0rDarkness = true;
  
-@@ -30502,6 +_,8 @@
+@@ -30500,8 +_,15 @@
+ 		if (item.type == 5075)
+ 			hasRainbowCursor = true;
  
++		/* VanillaCode:
  		if (item.type == 5587)
  			coat = 251;
++		*/
++		// TML: Use the item's registered Coat equip texture instead of a single hard-coded item visual.
++		if (item.coatSlot > 0)
++			coat = item.coatSlot;
 +
 +		ItemLoader.UpdateVisibleAccessory(item, this, false);
  	}
@@ -5664,7 +5753,7 @@
 +		if (whoAmI == Main.myPlayer && info.Dodgeable) {
 +			if (PlayerLoader.FreeDodge(this, info))
 +				return 0.0;
-+		
++
  			if (mysticSashDodge && Main.rand.Next(10) == 0) {
  				DoMysticSashDodge();
  				return 0.0;
@@ -5974,7 +6063,7 @@
 +			goto postSound;
 +
  		PlayDeathSound();
-+		
++
 +		postSound:
 +
  		if (Main.tenthAnniversaryWorld) {
@@ -6272,7 +6361,7 @@
  				style = 8;
  			else if (ZoneDesert && Main.remixWorld)
  				style = 8;
-+				
++
 +			if (CurrentSceneEffect.biomeCampfireItemType.value > -1) {
 +				var item = ContentSamples.ItemsByType[CurrentSceneEffect.biomeCampfireItemType.value];
 +				type = item.createTile;
@@ -7262,16 +7351,16 @@
  		Teleport(pointPosition, 1);
  		NetMessage.SendData(65, -1, -1, null, 0, whoAmI, pointPosition.X, pointPosition.Y, 1);
  		if (sItem.type != 1326)
-@@ -37711,6 +_,9 @@
- 	{
+@@ -37712,6 +_,9 @@
  		if (Main.tileHammer[targetTile.type])
  			return false;
-+			
+ 
 +		if (TileID.Sets.CanBeSloped[targetTile.type])
 +			return true;
- 
++
  		if (!Main.tileSolid[targetTile.type] && targetTile.type != 314 && targetTile.type != 424 && targetTile.type != 442 && targetTile.type != 351 && targetTile.type != 470)
  			return TileID.Sets.IsLivingFire[targetTile.type];
+ 
 @@ -37726,7 +_,10 @@
  			}
  		}
@@ -7449,10 +7538,22 @@
  			if (Main.dualDungeonsSeed && (double)y > Main.worldSurface && DungeonGenerationStyles.Temple.WallIsInStyle(tile.wall, includeWindows: true))
  				return false;
  
-@@ -38943,11 +_,21 @@
+@@ -38943,11 +_,33 @@
  
  	private void ItemCheck_Shoot(int i, Item sItem, int weaponDamage, bool withAudioVisualFeedback = true)
  	{
++		bool previousFreeUse = sItem.IsPerformingFreeUse;
++		sItem.IsPerformingFreeUse = !withAudioVisualFeedback;
++		try {
++			ItemCheck_ShootInner(i, sItem, weaponDamage, withAudioVisualFeedback);
++		}
++		finally {
++			sItem.IsPerformingFreeUse = previousFreeUse;
++		}
++	}
++
++	private void ItemCheck_ShootInner(int i, Item sItem, int weaponDamage, bool withAudioVisualFeedback)
++	{
 +		if (!CombinedHooks.CanShoot(this, sItem))
 +			return;
 +
@@ -7506,7 +7607,7 @@
  			flag = false;
  
  		Vector2 value = Vector2.UnitX.RotatedBy(fullRotation);
-@@ -39189,6 +_,16 @@
+@@ -39189,6 +_,19 @@
  			num5 = vector5.Y;
  		}
  
@@ -7514,6 +7615,9 @@
 +
 +		ShootHook:
 +		Vector2 velocity = new Vector2(num4, num5);
++
++		if (accWickedArmlet && ProjectileID.Sets.IsAWhip[projToShoot])
++			KnockBack += 1f;
 +
 +		CombinedHooks.ModifyShootStats(this, sItem, ref pointPosition, ref velocity, ref projToShoot, ref Damage, ref KnockBack);
 +
@@ -7568,6 +7672,18 @@
  
  			Vector2 vector12 = new Vector2(num4, num5);
  			vector12.Normalize();
+@@ -40485,10 +_,7 @@
+ 				num165 *= -2.5f;
+ 
+ 			float num166 = 1f;
+-			if (accWickedArmlet) {
+-				float num167 = 1f;
+-				KnockBack += num167;
+-			}
++			// Wicked Armlet applies to all whip types before ModifyShootStats.
+ 
+ 			float ai6 = 0f;
+ 			if (!withAudioVisualFeedback) {
 @@ -41527,10 +_,14 @@
  		projType = 721;
  		Item item = inventory[selectedItem];
@@ -7795,6 +7911,46 @@
 +		if (CombinedHooks.CanConsumeBait(this, item) ?? flag) {
  			if (item.type == 4361 || item.type == 4362)
  				NPC.LadyBugKilled(base.Center, item.type == 4362);
+ 
+@@ -43932,7 +_,11 @@
+ 
+ 	public bool CheckManaPredictWithoutUse(int amountBeforeManaCost, bool allowQuickMana = true)
+ 	{
+-		int num = (int)((float)amountBeforeManaCost * manaCost);
++		return CheckManaPredictWithoutUseCost((int)(amountBeforeManaCost * manaCost), allowQuickMana);
++	}
++
++	private bool CheckManaPredictWithoutUseCost(int num, bool allowQuickMana = true)
++	{
+ 		if (statMana >= num)
+ 			return true;
+ 
+@@ -44003,7 +_,7 @@
+ 		if (skipUsageCheck)
+ 			return canUse;
+ 
+-		if (!CheckManaPredictWithoutUse(rawAmountToPay))
++		if (!CheckManaPredictWithoutUseCost(rawAmountToPay))
+ 			return false;
+ 
+ 		return canUse;
+@@ -44020,7 +_,7 @@
+ 			return true;
+ 		}
+ 
+-		if (!CheckMana(rawAmountToPay, !freeUsage))
++		if (!CheckMana(sItem, rawAmountToPay, pay: !freeUsage))
+ 			return false;
+ 
+ 		return true;
+@@ -44030,7 +_,7 @@
+ 	{
+ 		bool altFire = altFunctionUse == 2;
+ 		skipUsageCheck = ItemCheck_PayMana_ShouldSkipManaUse(sItem, altFire);
+-		rawAmountToPay = ItemCheck_PayMana_GetManaCostToPay(sItem, altFire);
++		rawAmountToPay = GetManaCost(sItem);
+ 		freeUsage = ItemCheck_PayMana_ShouldPayManaAfterCheck(sItem);
+ 	}
  
 @@ -44060,7 +_,10 @@
  		if (sItem.type == 3269)
@@ -8270,6 +8426,24 @@
  	}
  
  	private Item PickAmmo_IterateRange(Item sItem, Item[] items, int[] slotIterationOrder, bool allowAmmoCycling = true)
+@@ -44898,7 +_,7 @@
+ 			array = slotIterationOrder;
+ 			foreach (int num3 in array) {
+ 				Item item = items[num3];
+-				if (item.ammo == sItem.useAmmo && item.stack > 0)
++				if (item.stack > 0 && ItemLoader.CanChooseAmmo(sItem, item, this))
+ 					num2++;
+ 			}
+ 
+@@ -44913,7 +_,7 @@
+ 		array = slotIterationOrder;
+ 		foreach (int num4 in array) {
+ 			Item item2 = items[num4];
+-			if (item2.ammo == sItem.useAmmo && item2.stack > 0) {
++			if (item2.stack > 0 && ItemLoader.CanChooseAmmo(sItem, item2, this)) {
+ 				if (num == 0)
+ 					return item2;
+ 
 @@ -44973,7 +_,7 @@
  					NetMessage.SendData(17, -1, -1, null, 0, x, y, 1f);
  				}

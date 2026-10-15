@@ -183,7 +183,8 @@ public partial class Recipe
 		if (tileID < 0 || tileID >= TileLoader.TileCount)
 			throw new RecipeException($"No tile has ID '{tileID}'.");
 
-		requiredTile = tileID;
+		if (!requiredTiles.Contains(tileID))
+			requiredTiles.Add(tileID);
 
 		return this;
 	}
@@ -414,7 +415,7 @@ public partial class Recipe
 		clone.createItem = createItem.Clone();
 
 		clone.requiredItem = new List<Item>(requiredItem.Select(x => x.Clone()).ToArray());
-		clone.requiredTile = requiredTile;
+		clone.requiredTiles = new List<int>(requiredTiles);
 		clone.acceptedGroups = new List<int>(acceptedGroups.ToArray());
 		clone.notDecraftable = notDecraftable;
 		clone.crimson = crimson;
@@ -441,7 +442,7 @@ public partial class Recipe
 
 		// A subsequent call to Register() will re-add this hook if Bottles is a required tile, so we remove
 		// it here to not have multiple duplicate hooks.
-		if (clone.requiredTile == TileID.Bottles)
+		if (clone.HasTile(TileID.Bottles))
 			clone.ConsumeIngredientHooks -= IngredientQuantityRules.Alchemy;
 
 		return clone;
@@ -459,11 +460,11 @@ public partial class Recipe
 		if (RecipeIndex >= 0)
 			throw new RecipeException("There was an attempt to register an already registered recipe.");
 
-		if (requiredTile == TileID.Bottles)
+		if (HasTile(TileID.Bottles))
 			AddConsumeIngredientCallback(IngredientQuantityRules.Alchemy);
 
-		if (requiredTile >= 0)
-			TileUsedInRecipes[requiredTile] = true;
+		foreach (int tile in requiredTiles)
+			TileUsedInRecipes[tile] = true;
 
 		if (numRecipes >= maxRecipes) {
 			maxRecipes += 500;

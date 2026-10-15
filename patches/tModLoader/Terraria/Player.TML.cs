@@ -26,6 +26,11 @@ public partial class Player : IEntityWithInstances<ModPlayer>
 	public Item equippedWings = null;
 
 	/// <summary>
+	/// The currently active <see cref="ArmorSetBonus"/>.
+	/// </summary>
+	public ArmorSetBonus ActiveArmorSetBonus = null;
+
+	/// <summary>
 	/// Set by any gem robe when worn by the player in the functional armor slot. Increases the spawn rate of <see cref="NPCID.Tim"/>.
 	/// </summary>
 	public bool hasGemRobe = false;
@@ -503,7 +508,7 @@ public partial class Player : IEntityWithInstances<ModPlayer>
 	}
 
 	/// <summary>
-	/// Determines if this player has enough mana to use an item.
+	/// Determines if this player can use an item, including slowed casting without enough mana in the 1.4.5 mana system.
 	/// <br/> If the player doesn't have enough mana and <paramref name="blockQuickMana"/> is <see langword="false"/>, the player will activate any missing mana effects they have and try again.
 	/// <br/> The <paramref name="pay"/> parameter can be used to consume the mana amount.
 	/// </summary>
@@ -511,7 +516,7 @@ public partial class Player : IEntityWithInstances<ModPlayer>
 	/// <param name="amount">The amount of mana needed. If <c>-1</c>, calculate using <see cref="GetManaCost(Item)"/>.</param>
 	/// <param name="pay">If <see langword="true"/>, actually use the mana requested.</param>
 	/// <param name="blockQuickMana">If <see langword="true"/>, prevent on missing mana effects like the Mana Flower from activating if the player doesn't have enough mana.</param>
-	/// <returns><see langword="true"/> if the player has enough mana to use the item, <see langword="false"/> otherwise.</returns>
+	/// <returns><see langword="true"/> if the item can be used; with ManaV2, insufficient mana enables slow casting instead of failing.</returns>
 	public bool CheckMana(Item item, int amount = -1, bool pay = false, bool blockQuickMana = false)
 	{
 		slowMagicUse = false;

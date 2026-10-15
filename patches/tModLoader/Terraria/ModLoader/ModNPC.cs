@@ -200,7 +200,7 @@ public abstract class ModNPC : ModType<NPC, ModNPC>, ILocalizedModType
 	/// </summary>
 	/// <param name="numPlayers">The number of active players</param>
 	/// <param name="balance">Scaling factor that increases by a fraction for each player</param>
-	/// <param name="bossAdjustment">An extra reduction factor to be applied to boss life in high difficulty modes</param>
+	/// <param name="bossAdjustment">An optional master-mode life reduction factor for modded NPCs, interpolated from 1 in expert to <see cref="NPC.CommonMasterBossLifeReduction"/> in master. For vanilla NPC types this is 1: vanilla has already applied its per-type reductions before this hook.</param>
 	public virtual void ApplyDifficultyAndPlayerScaling(int numPlayers, float balance, float bossAdjustment)
 	{
 	}

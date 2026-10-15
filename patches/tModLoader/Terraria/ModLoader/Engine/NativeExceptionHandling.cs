@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Terraria.Utilities;
 
 namespace Terraria.ModLoader.Engine;
@@ -17,8 +18,13 @@ internal static class NativeExceptionHandling
 	}
 
 	// Unhandled exception filter callback
+	private static int handlingUnhandledException;
+
 	static IntPtr OurUnhandledExceptionFilter(IntPtr exceptionInfo)
 	{
+		// Dump creation must never recursively re-enter the native crash handler.
+		if (Interlocked.Exchange(ref handlingUnhandledException, 1) != 0)
+			return (IntPtr)1;
 		Logging.tML.Fatal("Native exception has occurred, attempting to determine erroring module...");
 
 		// System.Diagnostics.Debugger.Launch(); // To debug this code, uncomment this line and start tModLoader without debugging.
@@ -55,7 +61,14 @@ internal static class NativeExceptionHandling
 		if (Main.instance?.LaunchParameters?.ContainsKey("-fulldump") == true)
 			dumpOptions = CrashDump.Options.WithFullMemory;
 
-		string minidumpPath = CrashDump.WriteExceptionAsZipAndClearOld(dumpOptions, exceptionInfo);
+		string minidumpPath;
+		try {
+			minidumpPath = CrashDump.WriteExceptionAsZipAndClearOld(dumpOptions, exceptionInfo);
+		}
+		catch (Exception e) {
+			Logging.tML.Fatal("Minidump saving failed: " + e.Message);
+			return (IntPtr)1;
+		}
 		if (minidumpPath == null) {
 			Logging.tML.Fatal($"Minidump saving failed, either this isn't Windows or the logs folder could not be created."); // Shouldn't be possible with current code.
 		}

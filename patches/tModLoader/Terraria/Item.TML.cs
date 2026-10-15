@@ -17,6 +17,9 @@ public partial class Item : TagSerializable, IEntityWithGlobals<GlobalItem>
 
 	private int currentUseAnimationCompensation;
 
+	/// <summary>True during a secondary whip, gem-staff follow-up shot, or automatic minion resummon that applies no item use time.</summary>
+	public bool IsPerformingFreeUse { get; internal set; }
+
 	/// <summary>
 	/// The ModItem instance attached to this Item. All modded items will have an appropriate instance of the ModItem-inheriting class assigned to this field. Will be null for vanilla items. Can be used to check if an Item is a modded item or not.
 	/// <para/> If you need to access members of a specific ModItem class from code outside of the ModItem, you can cast to your class:

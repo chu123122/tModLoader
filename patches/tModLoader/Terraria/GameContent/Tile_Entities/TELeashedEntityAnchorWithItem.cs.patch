@@ -1,0 +1,18 @@
+--- src/TerrariaNetCore/Terraria/GameContent/Tile_Entities/TELeashedEntityAnchorWithItem.cs
++++ src/tModLoader/Terraria/GameContent/Tile_Entities/TELeashedEntityAnchorWithItem.cs
+@@ -3,13 +_,13 @@
+ 
+ namespace Terraria.GameContent.Tile_Entities;
+ 
+-public abstract class TELeashedEntityAnchorWithItem : TELeashedEntityAnchor
++public abstract partial class TELeashedEntityAnchorWithItem : TELeashedEntityAnchor
+ {
+ 	protected int itemType;
+ 
+ 	public override void WriteExtraData(BinaryWriter writer, bool networkSend)
+ 	{
+-		writer.Write((short)itemType);
++		writer.Write((short)(itemType < Terraria.ID.ItemID.Count ? itemType : 0));
+ 	}
+ 
+ 	public override void ReadExtraData(BinaryReader reader, int gameVersion, bool networkSend)

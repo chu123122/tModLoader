@@ -329,6 +329,103 @@ SilverBarRecipeGroup = RecipeGroup.Register(
 );
 ```
 
+### Declarative Armor Set Bonuses
+
+Armor sets are now declarative, meaning that they are stored as data rather than hard-coded logic. This change helps facilitate showing the "Set Bonus (NumEquipped/NumTotal)" tooltip line and other features. The new armor set system, found in the `ArmorSetBonuses` and `ArmorSetBonus` classes, allows armor sets to be created and registered. Each armor set is an `ArmorSetBonus` object that contains the head, body, and legs armor items, code for the armor set effects, a description, and optionally an indication of a primary equipment slot. The system supports optional equipment slots and multiple options for each equipment slot.
+
+Mods will need to update their code to use the new system, `ModItem.IsArmorSet` has been removed in favor of ensuring that all armor sets are properly declared as armor sets to take advantage of the features of the new system.
+
+#### Examples
+Here are some examples of declaring armor sets:
+```cs
+// These examples show code found in SetStaticDefaults of a helmet item (ExampleHelmet):
+int body = ModContent.ItemType<ExampleBreastplate>();
+int legs = ModContent.ItemType<ExampleLeggings>();
+
+// Basic armor set. Consists of a full set of items. No substitutions.
+AddArmorSet(Type, body, legs);
+
+// Basic armor set alternate approach. Generics can be used if all items are ModItems.
+AddArmorSet<ExampleHelmet, ExampleBreastplate, ExampleLeggings>();
+
+// Basic armor set with no legs. This is how the Wizard Hat set is implemented.
+AddArmorSet(Type, body, ItemID.None);
+
+// Armor set with multiple options and the same behavior. In this case, both ExampleHelmet and ExampleHood will satisfy this armor set. This is how the Necro armor set is implemented
+// For armor sets with multiple options, the CreateArmorSet method is followed by any number of Set methods to define the options, then Add must be called at the end.
+int alternateHelmet = ModContent.ItemType<ExampleHood>();
+CreateArmorSet().Set(Type, body, legs).Set(alternateHelmet, body, legs).Add();
+
+// Same as above but using generics.
+CreateArmorSet().Set<ExampleHelmet, ExampleBreastplate, ExampleLeggings>().Set<ExampleHood, ExampleBreastplate, ExampleLeggings>().Add();
+
+// Armor set with multiple options and the same behavior. In this case either complete set will satisfy and apply the armor set. Note that the items aren't interchangeable and can't be mixed and matched. This is how the Wood armor sets are implemented.
+int alternateBody = ModContent.ItemType<ExampleBreastplate_Alt>();
+int alternateLegs = ModContent.ItemType<ExampleLeggings_Alt>();
+CreateArmorSet().Set(Type, body, legs).Set(alternateHelmet, alternateBody, alternateLegs).Add();
+
+// Armor set with multiple options and the same behavior. In this case every equipment is interchangeable. For example ExampleLeggings_Alt can be used with ExampleHelmet and ExampleBreastplate. This is how the Shadow/Ancient Shadow armor sets are implemented.
+CreateArmorSet().Set([Type, alternateHelmet], [body, alternateBody], [legs, alternateLegs]).Add();
+
+// Armor sets sharing armor items except and having a primary item that changes the tooltip.
+// The PartType parameter lets the game know that the head and legs items are part of multiple armor sets with different set bonus tooltips, so "Changes with (head/torso/leg) piece" is shown instead of the the set bonus tooltip. This is how the Beetle armor set is implemented.
+// Customizing localization and the identifier is explained in the next section.
+AddArmorSet(Type, body, legs, this.GetLocalization("SetBonus_Melee"), "ExampleMod/ExampleArmor_Melee", PrimaryPart: ArmorSetBonus.PartType.Body);
+AddArmorSet(Type, alternateBody, legs, this.GetLocalization("SetBonus_Ranged"), "ExampleMod/ExampleArmor_Ranged", PrimaryPart: ArmorSetBonus.PartType.Body);
+```
+
+The examples above all used `ModItem` helper methods that automate registering a localization key, assigning the armor set effect to `ModItem.UpdateArmorSet`, and assigning a default identifier string. These can all be customized by providing values for the optional parameters of the methods. The set bonus text can be customized by passing in a `LocalizedText`. The code that executes can be customized as well by passing in a delegate. The identifier can also be passed in, which is useful if you need to differentiate between multiple set bonuses that use some of the same items. The `ArmorSetBonuses.Add` and `ArmorSetBonuses.Create` methods could be used instead of the `ModItem.AddArmorSet` and `ModItem.CreateArmorSet` helper methods as well, such as if used in `GlobalItem`.
+
+```cs
+// Customize the set bonus tooltip. We can pass in any localization key rather than the automatically derived "Mods.{ModName}.Items.{ItemName}.SetBonus" key. We can also pass in a LocalizedText object.
+// In this example, we are using the automatic key but populating it with a value. This helps keep the set bonus effect in line with the tooltip as a mod is updated.
+LocalizedText SetBonusText = this.GetLocalization("SetBonus").WithFormatArgs(AdditiveGenericDamageBonus);
+AddArmorSet(Type, body, legs, SetBonusText);
+
+// The SetBonus_Melee and SetBonus_Ranged examples above show using a custom key and a custom identifier.
+
+// And of course, we can use a specific localization key, either by typing it out or using Mod.GetLocalizationKey, which can be useful for organization.
+AddArmorSet(Type, body, legs, Mod.GetLocalizationKey("CommonSetBonuses.Example"));
+
+// Finally, we can customize the code that runs for each armor set. By default, the UpdateArmorSet method is called. We could check the data on the ArmorSetBonus passed into the method to implement custom code for alternate armor sets, but another option is to pass in a ArmorSetBonus.ArmorSetEffect delegate directly. Here is a full example of that:
+
+public static readonly int AdditiveMeleeDamageBonus = 15;
+public static readonly int AdditiveRangedDamageBonus = 25;
+
+public override void SetStaticDefaults() {
+	int body = ModContent.ItemType<ExampleBreastplate>();
+	int alternateBody = ModContent.ItemType<ExampleBreastplate_Alt>();
+	int legs = ModContent.ItemType<ExampleLeggings>();
+
+	var SetBonusTextMelee = this.GetLocalization("SetBonus_Melee").WithFormatArgs(AdditiveMeleeDamageBonus);
+	ArmorSetBonuses.Add(Type, body, legs, "ExampleMod/ExampleArmor_Melee", SetBonusTextMelee, UpdateArmorSetMelee, ArmorSetBonus.PartType.Body);
+	var SetBonusTextRanged = this.GetLocalization("SetBonus_Ranged").WithFormatArgs(AdditiveRangedDamageBonus);
+	ArmorSetBonuses.Add(Type, alternateBody, legs, "ExampleMod/ExampleArmor_Ranged", SetBonusTextRanged, UpdateArmorSetRanged, ArmorSetBonus.PartType.Body);
+}
+
+private void UpdateArmorSetMelee(Player player) {
+	player.GetDamage(DamageClass.Melee) += AdditiveMeleeDamageBonus / 100f;
+}
+private void UpdateArmorSetRanged(Player player) {
+	player.GetDamage(DamageClass.Ranged) += AdditiveRangedDamageBonus / 100f;
+}
+```
+
+#### Modifying Existing Armor Sets
+
+Previously, mods used `IsArmorSet` and `UpdateArmorSet` to apply additional changes to vanilla armor sets. Now that `IsArmorSet` is gone, mods will instead check the `ArmorSetBonus.Identifier` directly in `UpdateArmorSet`: `if (armorSetBonus?.Identifier == "MagicHat") { ... }`.
+
+`(Mod|Global)Item.ModifyArmorSets` has been added, this is the intended location of modifying `ArmorSetBonus` data (Contained in `ArmorSetBonuses.All`). For example, `armorSetBonus.Effect += MagicHatAdditionalEffects` could be used as an alternative to `GlobalItem.UpdateArmorSet`. This is also where `ArmorSetBonus.Description` should be modified. Previously, modders would adjust `Player.setBonus` directly, but that has been removed. We recommend adjusting `ArmorSetBonus.Description` in the manner shown in ArmorSetTweaks.cs for compatibility. This approach should allow multiple mods to modify the armor set description without conflicting.
+
+ArmorSetTweaks.cs shows off modifying existing armor sets and ExampleRobe.cs shows off adding additional variants (different armor items) to existing armor sets.
+
+#### Porting Notes
+* 🤖: `ModItem.UpdateArmorSet` and `GlobalItem.UpdateArmorSet` now have an `ArmorSetBonus armorSetBonus` parameter.
+* ⚙️: `ModItem.IsArmorSet` and `GlobalItem.IsArmorSet` removed. Use `AddArmorSet` as described above to replace this.
+* Using vanilla armor from existing armor sets in modded sets is now potentially confusing to the user due to how the set bonus tooltip is calculated and displayed. The game will show the armor set tooltip for an item in the inventory (not just the equipment slots), so if a modded armor set also uses that item, it might potentially show the modded armor set bonus tooltip rather than the original vanilla armor set bonus tooltip the player might be looking for.
+* 💀: `Player.setBonus` has been removed. The set bonus tooltip is taken directly from the active `ArmorSetBonus`. This value will be populated as described previously.
+  * See "Modifying Existing Armor Sets" above for how to modify vanilla set bonus description text.
+
 ### Whips and Tag Effects
 
 #### Tag Effects
@@ -348,7 +445,7 @@ The way whip tag damage and effects are applied have been redone. Most functiona
 
 #### Whip Changes
 
-Whip AI has changed slightly. `Projectile.ai[1]` is now used to set the swing direction.
+Whip AI has changed. `Projectile.ai[1]` is now used to set the swing direction and `Projectile.ai[2]` is used to denote it as a secondary whip.
 
 * This means you'll need to override the item's `Shoot` and spawn the projectile manually now.
 * The following code is exactly what you'll need and is what vanilla does.
@@ -365,7 +462,34 @@ public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, 
 	}
 	// Set swingDirection to 1f for the pre-1.4.5 behavior.
 
-	Projectile.NewProjectile(source, position, velocity, type, damage, knockback, player.whoAmI, 0f, swingDirection);
+	// If the Snake Band spawns this whip, no item time is applied.
+	// However, the whip projectile AI applies the life time from the item time.
+	// So, spawn the secondary whip with a value set in Projectile.ai[2] with its life time.
+	float secondaryWhipTime = 0f;
+	if (Item.IsPerformingFreeUse) {
+		// Set the velocity of the secondary whip to be a little different from the primary whip.
+		velocity = velocity.RotatedByRandom(MathHelper.Pi / 10f);
+
+		// Secondary whips are set to double this item's animation time.
+		// The 1000f is important for designating that the whip is a secondary whip and is corrected in Projectile.GetWhipSettings().
+		secondaryWhipTime = 1000f + player.itemAnimationMax * 2f;
+
+		// Reduce the damage and knockback of the secondary whip.
+		float secondaryWhipDamageMultiplier = 0.3f; // -70% damage
+		float secondaryWhipKnockbackMultiplier = 0.25f; // -75% knockback
+		damage = (int)MathHelper.Max(damage * secondaryWhipDamageMultiplier, 3); // Make the secondary whip deal at least 3 damage.
+		knockback *= secondaryWhipKnockbackMultiplier;
+	}
+
+	// Spawn the whip projectile.
+	Projectile.NewProjectile(source, position, velocity, type, damage, knockback, player.whoAmI, ai0: 0f, ai1: swingDirection, ai2: secondaryWhipTime);
+
+	// If the whip is a primary whip (not spawned by the Snake Band), keep track of how many swings we've done.
+	if (!Item.IsPerformingFreeUse) {
+		player.repeatWhipSwings++;
+		player.repeatWhipsResetCooldown = 120;
+	}
+
 	return false; // Return false because we've already spawned the projectile.
 }
 ```
@@ -478,8 +602,11 @@ Several Example Mod examples have been updated to adapt to 1.4.5 changes and to 
     * Added the `Shoot()` override to spawn the projectile manually for the swing direction. See the *Whip Changes* section above for details.
     * If you weren't using `Projectile.DefaultToWhip()`, add `Projectile.drawLayer = ProjectileDrawLayerID.HeldProj` to the projectile's SetDefaults.
     * Replace `float swingTime = owner.itemAnimationMax * Projectile.MaxUpdates` with `Projectile.GetWhipSettings(Projectile, out float timeToFlyOut, out _, out _)`
-	  * `Projectile.GetWhipSettings` has new functionality for when the whip is displayed on a mannequin.
-    * Add `owner.MatchItemTimeToItemAnimation()` after setting the `heldProj` to match vanilla.
+	  * `Projectile.GetWhipSettings` has new functionality for when the whip is displayed on a mannequin and for secondary whips.
+	* The check for `owner.itemAnimation <= 0` before `Projectile.Kill()` needs to be removed.
+	* Before setting the heldProj, there is a new check to see if the whip is a secondary whip.
+      * Add `owner.MatchItemTimeToItemAnimation()` after setting the `heldProj` to match vanilla.
+	* The local assignment of `Projectile.WhipPointsForCollision` has changed to using `Projectile.WhipPointsForCollision` directly as well as clearing it before `Projectile.FillWhipControlPoints`.
     * The draw code has been changed to work better for different segment amounts.
 	  * `Projectile.FillWhipControlPoints` has been updated to pass the player parameter.
       * Previously, the draw code was specific for `ExampleWhipProjectileAdvanced`. Now it will work for any number of segments.
@@ -650,3 +777,20 @@ In addition to changes to existing features and adapting to vanilla changes, 1.4
 * `ModSky` is an alternative to `CustomSky` that handles common boilerplate, making custom skies easier to implement and use.
 * `(Mod|Global)(Tile|Wall).(CanDoWireStuffHere|CanShowWireStuffHere)` hooks allow customizing wire interaction and visibility. One example is how wires in the Jungle Temple are hidden and can't be removed until Golem is defeated.
 * `(Mod|Global)Liquid` is a net new feature class added in 1.4.5 to support new use cases. This addition comes with the caveat it is runtime breaking; all mods using ModWall or ModTile must be compiled on 1.4.5 to adapt to intertwined backend class hierachy changes to facilitate this.   
+
+
+## Local 1.4.5.8 integration notes
+
+These notes describe the local integration branch, not a released upstream API guarantee.
+
+- `Recipe.AddTile` supports multiple required stations again. Every station is required for crafting; a station's new crafting window lists recipes requiring **any** of its equivalent stations. Use `requiredTiles`/`HasTile`; assigning the compatibility `requiredTile` scalar resets the list to a single station.
+- Crafting callbacks run only after approval. `OnCraft` receives the actual local and remote consumed item stacks and the destination stack; rejected remote requests refund locally reserved items without invoking success callbacks. This branch extends the crafting approval packet, so both multiplayer endpoints must run the same build.
+- Register armor effects with `AddArmorSet`/`CreateArmorSet`. Use `GetEffectiveArmor` when reading shared equipment. `UpdateArmorSet(Player, ArmorSetBonus)` runs on the effective equipped item instances; the old `IsArmorSet`/string bonus pattern has been replaced.
+- `EquipType.Coat` uses the body composite layout and shares its numeric texture range with body armor. Optional `_Coat_Front` and `_Coat_Back` textures use the leg layout without replacing equipped leg armor. Use `EquipLoader.GetEquipSlot` and `ArmorIDs.Coat.Sets` instead of fixed vanilla counts.
+- `ApplyDifficultyAndPlayerScaling` runs after the vanilla difficulty and player-count adjustments. Vanilla types receive `bossAdjustment = 1` because their per-type reductions have already happened. Modded types receive the interpolated expert-to-master common reduction; their implementation still decides whether to multiply by `balance` and `bossAdjustment`. Read `NPC.difficulty` rather than assuming `Main.GameMode` matches a spawn's difficulty override.
+- `Item.IsPerformingFreeUse` is scoped to shooting callbacks, including secondary whip and gem-staff follow-ups. Its previous value is restored after callbacks, including exceptions.
+- `Lang.CreateDialogFilter(prefix, substitutions)` accepts object substitutions and evaluates `ConditionsMetWith`. The boolean overload remains available for the native formatting path.
+- Banner networking includes modded IDs, while world files store modded kill and unclaimed-banner counts by mod/content name in `.twld`. Leashed critter and kite anchors likewise persist modded item identity through `ItemIO`.
+- Tile snapshots now serialize persistent tile, wall, paint, coating, wire and liquid state through tML tile storage. Their local format changed from 12 to 16 bytes per tile; old debug snapshots are rejected by the existing size check. Custom `ITileData`, modded chest contents, and modded tile-entity checkpoint behavior still require separate work.
+
+Unresolved porting investigations remain in `PortingAudit_1.4.5.md`; this branch does not claim completion of all upstream hooks, rendering combinations, special seeds or third-party mods.

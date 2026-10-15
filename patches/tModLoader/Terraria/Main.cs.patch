@@ -5327,6 +5327,17 @@
  				value = TextureAssets.InventoryBack14.Value;
  				white = Microsoft.Xna.Framework.Color.White;
  			}
+@@ -37593,8 +_,8 @@
+ 	public static string GetRecipeRequirementsText(Recipe recipe, bool explicitNone)
+ 	{
+ 		_requiredObjectsForCraftingText.Clear();
+-		if (recipe.requiredTile >= 0)
+-			_requiredObjectsForCraftingText.Add(Recipe.GetRequiredTileName(recipe.requiredTile));
++		foreach (int tile in recipe.requiredTiles)
++			_requiredObjectsForCraftingText.Add(Recipe.GetRequiredTileName(tile));
+ 
+ 		if (recipe.needWater)
+ 			_requiredObjectsForCraftingText.Add(Lang.inter[53].Value);
 @@ -37614,6 +_,9 @@
  		if (recipe.needTorchGodsFavor)
  			_requiredObjectsForCraftingText.Add(Lang.inter[125].Value);
@@ -5366,9 +5377,16 @@
  
  	public static bool LocalPlayerHasPendingInventoryActions()
  	{
-@@ -37960,7 +_,12 @@
- 	public static void CraftItem_GrantItem(Recipe recipe, Item result, bool quickCraft)
+@@ -37957,10 +_,18 @@
+ 		return true;
+ 	}
+ 
+-	public static void CraftItem_GrantItem(Recipe recipe, Item result, bool quickCraft)
++	public static void CraftItem_GrantItem(Recipe recipe, Item result, bool quickCraft, List<Item> consumedItems = null)
  	{
++		RecipeLoader.OnCraft(result, recipe, consumedItems ?? new List<Item>(), mouseItem);
++		if (result.stack <= 1)
++			result.Prefix(-1);
  		Invariant.Assert(mouseItem.IsAir || Item.CanStack(mouseItem, result), "CraftItem_GrantItem cannot stack with MouseItem");
 +		/* TML: Use StackItems so OnStack hook fires.
  		result.stack += mouseItem.stack;
@@ -6868,7 +6886,7 @@
  					}
 +
 +					if (l >= SurfaceBackgroundID.Count) {
-+						LoaderManager.Get<SurfaceBackgroundStylesLoader>().DrawCloseBackground(l);
++						LoaderManager.Get<SurfaceBackgroundStylesLoader>().DrawCloseBackground(l, verticalParallaxOverride);
 +					}
  				}
  			}
@@ -7654,3 +7672,16 @@
  			PlayerInput.CacheOriginalScreenDimensions();
  			FixUIScale();
  			if (Main.OnResolutionChanged != null)
+@@ -58749,6 +_,12 @@
+ 	public static void OpenPlayerSelectFromNet(Action onPlayerSelected)
+ 	{
+ 		QueueMainThreadAction(delegate {
++			if (ModLoader.ModLoader.Mods.Length == 0 || menuMode == ModLoader.UI.Interface.loadModsID) {
++				ModLoader.Logging.tML.Info("Delaying network character selection until mods finish loading");
++				ModLoader.ModLoader.OnSuccessfulLoad += () => OpenPlayerSelectFromNet(onPlayerSelected);
++				return;
++			}
++
+ 			OpenPlayerSelect(onPlayerSelected);
+ 		});
+ 	}

@@ -16,3 +16,24 @@
  			Array.Clear(firstEntryForType, 0, firstEntryForType.Length);
  			Array.Clear(entries, 0, entries.Length);
  			numEntries = 1;
+@@ -457,8 +_,7 @@
+ 		int num = Math.Min(item2.maxStack - item2.stack, item.stack);
+ 		Invariant.Assert(Item.CanStack(item, item2) && num > 0 && item2.stack + num <= item2.maxStack && num <= item.stack, "FillStack allowed");
+ 		Chest.VisualizeChestTransfer(srcPosition, dest.position, item.type, Chest.ItemTransferVisualizationSettings.PlayerToChest);
+-		item2.stack += num;
+-		item.stack -= num;
++		ItemLoader.StackItems(item2, item, out _, numToTransfer: num);
+ 		if (item.stack == 0)
+ 			item.TurnToAir();
+ 
+@@ -472,8 +_,8 @@
+ 			Item item2 = source.items[i++];
+ 			if (Item.CanStack(item, item2)) {
+ 				int num = Math.Min(item.maxStack - item.stack, item2.stack);
+-				item.stack += num;
+-				item2.stack -= num;
++				if (num > 0)
++					ItemLoader.StackItems(item, item2, out _, numToTransfer: num);
+ 				if (item2.stack == 0)
+ 					item2.TurnToAir();
+ 			}

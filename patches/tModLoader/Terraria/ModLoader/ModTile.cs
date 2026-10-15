@@ -36,7 +36,7 @@ public abstract class ModTile : ModTileOrWall
 	/// <para/> Use <see cref="MineResist"/> to adjust how long a tile takes to be mined.</summary>
 	public int MinPick { get; set; }
 
-	/// <summary> An array of the IDs of tiles that this tile can be considered as when looking for crafting stations. </summary>
+	/// <summary> Fixed crafting-station equivalences. Assign during SetStaticDefaults; these are registered in Recipe.TileCountsAs for both adjacency and crafting UI filters. Use GlobalTile.AdjTiles for dynamic equivalences. </summary>
 	public int[] AdjTiles { get; set; } = new int[0];
 
 	public override string LocalizationCategory => "Tiles";

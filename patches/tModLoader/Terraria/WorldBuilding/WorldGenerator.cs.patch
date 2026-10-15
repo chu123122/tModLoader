@@ -10,6 +10,85 @@
  using Terraria.Utilities;
  
  namespace Terraria.WorldBuilding;
+@@ -356,38 +_,43 @@
+ 		if (_controller.PauseAfterPass != null)
+ 			SetDebugWorldGenUIVisibility(visible: true);
+ 
++		try {
+-		bool flag = false;
++			bool flag = false;
+-		while (true) {
++			while (true) {
+-			if (_controller.QueuedAbort) {
++				if (_controller.QueuedAbort) {
+-				flag = true;
++					flag = true;
+-				break;
+-			}
+-
+-			if (_controller.Paused) {
+-				_controller.OnPaused();
+-				continue;
+-			}
+-
+-			lock (_controlLock) {
+-				if (PassResults.Count == _passes.Count)
+ 					break;
++				}
++
++				if (_controller.Paused) {
++					_controller.OnPaused();
++					continue;
++				}
++
++				lock (_controlLock) {
++					if (PassResults.Count == _passes.Count)
++						break;
+ 
+-				_currentPass = _passes[PassResults.Count];
++					_currentPass = _passes[PassResults.Count];
+-				lock (_currentPass) {
++					lock (_currentPass) {
+-					PassResults.Add(RunPass(_currentPass));
++						PassResults.Add(RunPass(_currentPass));
+-					_controller.OnPassCompleted();
++						_controller.OnPassCompleted();
+-				}
++					}
+ 
+-				_currentPass = null;
++					_currentPass = null;
+-				continue;
++					continue;
++				}
+ 			}
+-		}
+ 
+-		Trace.WriteLine(string.Join("\n", PassResults) + $"\nFinished world - Seed: {Main.ActiveWorldFileData.SeedText} Width: {Main.maxTilesX}, Height: {Main.maxTilesY}, Evil: {WorldGen.WorldGenParam_Evil}, Difficulty: {Main.GameMode}\nTotal Generation Time: {PassResults.Sum((GenPassResult r) => r.DurationMs)}\n");
+-		SetDebugWorldGenUIVisibility(visible: false);
+-		CurrentGenerationProgress = null;
+-		CurrentController = null;
+-		return !flag;
++			Trace.WriteLine(string.Join("\n", PassResults) + $"\nFinished world - Seed: {Main.ActiveWorldFileData.SeedText} Width: {Main.maxTilesX}, Height: {Main.maxTilesY}, Evil: {WorldGen.WorldGenParam_Evil}, Difficulty: {Main.GameMode}\nTotal Generation Time: {PassResults.Sum((GenPassResult r) => r.DurationMs)}\n");
++			return !flag;
++		}
++		finally {
++			_currentPass = null;
++			CurrentGenerationProgress = null;
++			CurrentController = null;
++			SetDebugWorldGenUIVisibility(visible: false);
++		}
+ 	}
+ 
+ 	private static void SetDebugWorldGenUIVisibility(bool visible)
+@@ -421,6 +_,7 @@
+ 		}
+ 		catch (Exception ex) {
+ 			_controller.ReportException("Exception in Pass: " + pass.Name, ex);
++			throw;
+ 		}
+ 
+ 		_progress.End();
 @@ -437,7 +_,10 @@
  		_hashTime.Start();
  		uint[] line_hashes = new uint[Main.maxTilesX];

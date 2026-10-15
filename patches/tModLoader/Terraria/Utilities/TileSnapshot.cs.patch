@@ -1,37 +1,147 @@
 --- src/TerrariaNetCore/Terraria/Utilities/TileSnapshot.cs
 +++ src/tModLoader/Terraria/Utilities/TileSnapshot.cs
-@@ -48,10 +_,10 @@
+@@ -19,7 +_,7 @@
+ 		[FieldOffset(0)]
+ 		private ushort _type;
+ 		[FieldOffset(2)]
+-		private ushort _wall_bTileHeader3_packed;
++		private ushort _wall;
+ 		[FieldOffset(4)]
+ 		private ushort _sTileHeader;
+ 		[FieldOffset(6)]
+@@ -30,12 +_,16 @@
+ 		private byte _liquid;
+ 		[FieldOffset(11)]
+ 		private byte _bTileHeader;
++		[FieldOffset(12)]
++		private byte _coatings;
+ 		[FieldOffset(0)]
+ 		private int _i0;
+ 		[FieldOffset(4)]
+ 		private int _i1;
+ 		[FieldOffset(8)]
+ 		private int _i2;
++		[FieldOffset(12)]
++		private int _i3;
+ 		private static string[] _liquidNames = new string[4] {
+ 			"water",
+ 			"lava",
+@@ -47,11 +_,15 @@
+ 		{
  			TileStruct result = default(TileStruct);
  			result._type = tile.type;
- 			ushort wall = tile.wall;
+-			ushort wall = tile.wall;
 -			result._sTileHeader = tile.sTileHeader;
-+			//result._sTileHeader = tile.sTileHeader;
++			ushort wall = result._wall = tile.WallType;
++			result._sTileHeader = (ushort)(tile.TileColor
++				| (tile.HasTile ? 0x20 : 0) | (tile.IsActuated ? 0x40 : 0)
++				| (tile.RedWire ? 0x80 : 0) | (tile.BlueWire ? 0x100 : 0) | (tile.GreenWire ? 0x200 : 0)
++				| (tile.IsHalfBlock ? 0x400 : 0) | (tile.HasActuator ? 0x800 : 0)
++				| ((int)tile.Slope << 12) | (tile.IsWallFullbright ? 0x8000 : 0));
  			result._liquid = tile.liquid;
 -			result._bTileHeader = tile.bTileHeader;
-+			//result._bTileHeader = tile.bTileHeader;
 -			result._wall_bTileHeader3_packed = (ushort)(wall | ((tile.bTileHeader3 & 0xE0) << 8));
-+			//result._wall_bTileHeader3_packed = (ushort)(wall | ((tile.bTileHeader3 & 0xE0) << 8));
++			result._bTileHeader = (byte)(tile.WallColor | (tile.LiquidType << 5) | (tile.YellowWire ? 0x80 : 0));
++			result._coatings = (byte)((tile.IsTileInvisible ? 1 : 0) | (tile.IsWallInvisible ? 2 : 0) | (tile.IsTileFullbright ? 4 : 0));
  			if ((result._sTileHeader & 0x20) == 0) {
  				result._type = 0;
  				result._sTileHeader &= 35808;
-@@ -79,13 +_,13 @@
+@@ -77,21 +_,37 @@
+ 
+ 		public void Apply(Tile tile)
  		{
- 			tile.type = _type;
- 			tile.wall = (ushort)(_wall_bTileHeader3_packed & 0x1FFFu);
+-			tile.type = _type;
+-			tile.wall = (ushort)(_wall_bTileHeader3_packed & 0x1FFFu);
 -			tile.sTileHeader = _sTileHeader;
-+			//tile.sTileHeader = _sTileHeader;
- 			tile.frameX = _frameX;
- 			tile.frameY = _frameY;
- 			tile.liquid = _liquid;
+-			tile.frameX = _frameX;
+-			tile.frameY = _frameY;
+-			tile.liquid = _liquid;
 -			tile.bTileHeader = _bTileHeader;
-+			//tile.bTileHeader = _bTileHeader;
 -			tile.bTileHeader2 = 0;
-+			//tile.bTileHeader2 = 0;
 -			tile.bTileHeader3 = (byte)((uint)(_wall_bTileHeader3_packed >> 8) & 0xE0u);
-+			//tile.bTileHeader3 = (byte)((uint)(_wall_bTileHeader3_packed >> 8) & 0xE0u);
++			// Clear runtime frame/liquid flags, then restore persistent state through tML's tile storage.
++			tile.Get<TileWallWireStateData>() = default;
++			tile.Get<LiquidData>() = default;
++			tile.Get<TileWallBrightnessInvisibilityData>() = default;
++			tile.TileType = _type;
++			tile.WallType = _wall;
++			tile.HasTile = (_sTileHeader & 0x20) != 0;
++			tile.TileColor = (byte)(_sTileHeader & 0x1F);
++			tile.IsActuated = (_sTileHeader & 0x40) != 0;
++			tile.RedWire = (_sTileHeader & 0x80) != 0;
++			tile.BlueWire = (_sTileHeader & 0x100) != 0;
++			tile.GreenWire = (_sTileHeader & 0x200) != 0;
++			tile.IsHalfBlock = (_sTileHeader & 0x400) != 0;
++			tile.HasActuator = (_sTileHeader & 0x800) != 0;
++			tile.Slope = (SlopeType)((_sTileHeader >> 12) & 7);
++			tile.IsWallFullbright = (_sTileHeader & 0x8000) != 0;
++			tile.TileFrameX = _frameX;
++			tile.TileFrameY = _frameY;
++			tile.LiquidAmount = _liquid;
++			tile.WallColor = (byte)(_bTileHeader & 0x1F);
++			tile.LiquidType = (_bTileHeader >> 5) & 3;
++			tile.YellowWire = (_bTileHeader & 0x80) != 0;
++			tile.IsTileInvisible = (_coatings & 1) != 0;
++			tile.IsWallInvisible = (_coatings & 2) != 0;
++			tile.IsTileFullbright = (_coatings & 4) != 0;
  		}
  
  		public static bool operator ==(TileStruct lhs, TileStruct rhs)
+ 		{
+ 			if (lhs._i0 == rhs._i0 && lhs._i1 == rhs._i1)
+-				return lhs._i2 == rhs._i2;
++				return lhs._i2 == rhs._i2 && lhs._i3 == rhs._i3;
+ 
+ 			return false;
+ 		}
+@@ -109,7 +_,7 @@
+ 			return (TileStruct)obj == this;
+ 		}
+ 
+-		public override int GetHashCode() => _i0 ^ _i1 ^ _i2;
++		public override int GetHashCode() => _i0 ^ _i1 ^ _i2 ^ _i3;
+ 
+ 		public override string ToString()
+ 		{
+@@ -117,7 +_,7 @@
+ 			int num2 = _sTileHeader & 0x1F;
+ 			bool flag = (_sTileHeader & 0x400) != 0;
+ 			int num3 = (_sTileHeader & 0x7000) >> 12;
+-			int num4 = _wall_bTileHeader3_packed & 0x1FFF;
++			int num4 = _wall;
+ 			int num5 = _bTileHeader & 0x1F;
+ 			int num6 = (_bTileHeader & 0x60) >> 5;
+ 			bool flag2 = (_sTileHeader & 0x80) != 0;
+@@ -126,10 +_,10 @@
+ 			bool flag5 = (_bTileHeader & 0x80) != 0;
+ 			bool flag6 = (_sTileHeader & 0x800) != 0;
+ 			bool flag7 = (_sTileHeader & 0x40) != 0;
+-			bool flag8 = (_wall_bTileHeader3_packed & 0x2000) != 0;
++			bool flag8 = (_coatings & 1) != 0;
+-			bool flag9 = (_wall_bTileHeader3_packed & 0x4000) != 0;
++			bool flag9 = (_coatings & 2) != 0;
+ 			bool flag10 = (_sTileHeader & 0x8000) != 0;
+-			bool flag11 = (_wall_bTileHeader3_packed & 0x8000) != 0;
++			bool flag11 = (_coatings & 4) != 0;
+ 			string text = "!tile";
+ 			if (num) {
+ 				text = "tile:" + _type;
+@@ -165,6 +_,7 @@
+ 			writer.Write(_i0);
+ 			writer.Write(_i1);
+ 			writer.Write(_i2);
++			writer.Write(_i3);
+ 		}
+ 
+ 		public static TileStruct Read(BinaryReader reader)
+@@ -173,6 +_,7 @@
+ 			result._i0 = reader.ReadInt32();
+ 			result._i1 = reader.ReadInt32();
+ 			result._i2 = reader.ReadInt32();
++			result._i3 = reader.ReadInt32();
+ 			return result;
+ 		}
+ 	}
 @@ -211,7 +_,7 @@
  	{
  		Array.Resize(ref _tiles, Main.maxTilesX * Main.maxTilesY);

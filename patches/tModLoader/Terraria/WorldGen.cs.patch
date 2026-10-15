@@ -3539,19 +3539,19 @@
  								TileMergeAttempt(num, -2, ref up, ref down, ref left, ref right, ref upLeft, ref upRight, ref downLeft, ref downRight);
  								tileMergeCulling.Cull(ref up, ref down, ref left, ref right, ref upLeft, ref upRight, ref downLeft, ref downRight);
  							}
-@@ -71540,6 +_,12 @@
+@@ -71540,7 +_,11 @@
  
  						tileCache.frameX = (short)rectangle.X;
  						tileCache.frameY = (short)rectangle.Y;
 +
 +						TileLoader.PostTileFrame(num, i, j, up, down, left, right, upLeft, upRight, downLeft, downRight);
 +
-+						/* TODO: This fix now prevents a world from loading somehow
-+						if (tile.frameX != frameX && tile.frameY != frameY && frameX >= 0 && frameY >= 0) { // #4640 - Account for tile frameX/Y changes within TileLoader.PostTileFrame
-+						*/
- 						if (rectangle.X != frameX && rectangle.Y != frameY && frameX >= 0 && frameY >= 0) {
++						// Compare the tile being framed after the hook. In 1.4.5, 'tile' is the upper neighbor.
+-						if (rectangle.X != frameX && rectangle.Y != frameY && frameX >= 0 && frameY >= 0) {
++						if (tileCache.frameX != frameX && tileCache.frameY != frameY && frameX >= 0 && frameY >= 0) {
  							tileReframeCount++;
  							if (tileReframeCount < 25) {
+ 								bool num24 = mergeUp;
 @@ -71895,7 +_,7 @@
  
  				Tile tile30 = Main.tile[i, j + 1];

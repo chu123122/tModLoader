@@ -329,6 +329,7 @@ public static class ModContent
 
 		Interface.loadMods.SetLoadStage("tModLoader.MSResizing");
 		ResizeArrays();
+		ArmorSetBonuses.Initialize();
 
 		Main.ResourceSetsManager.AddModdedDisplaySets();
 		Main.ResourceSetsManager.SetActiveFromOriginalConfigKey();
@@ -391,7 +392,6 @@ public static class ModContent
 		Main.NPCInteractionDB = new NPCInteractionDatabase();
 		Main.NPCInteractionDB.Populate();
 
-		ArmorSetBonuses.Initialize();
 		ArmorSetBonuses.BuildLookup();
 		ItemID.Sets.PostSetupContent();
 		TileID.Sets.PostSetupContent();
@@ -415,6 +415,7 @@ public static class ModContent
 		RuntimeHelpers.RunClassConstructor(typeof(PrefixLegacy.ItemSets).TypeHandle);
 		RuntimeHelpers.RunClassConstructor(typeof(ArmorIDs.Head.Sets).TypeHandle);
 		RuntimeHelpers.RunClassConstructor(typeof(ArmorIDs.Body.Sets).TypeHandle);
+		RuntimeHelpers.RunClassConstructor(typeof(ArmorIDs.Coat.Sets).TypeHandle);
 		RuntimeHelpers.RunClassConstructor(typeof(ArmorIDs.Legs.Sets).TypeHandle);
 		RuntimeHelpers.RunClassConstructor(typeof(ArmorIDs.HandOn.Sets).TypeHandle);
 		RuntimeHelpers.RunClassConstructor(typeof(ArmorIDs.HandOff.Sets).TypeHandle);
@@ -615,6 +616,7 @@ public static class ModContent
 		ContentSamples.Initialize();
 		SetupBestiary();
 
+		ArmorSetBonuses.Unload();
 		LocalizationLoader.Unload();
 
 		CleanupModReferences();

@@ -281,7 +281,7 @@ public class SurfaceBackgroundStylesLoader : SceneEffectLoader<ModSurfaceBackgro
 		}
 	}
 
-	public void DrawCloseBackground(int style)
+	public void DrawCloseBackground(int style, float? verticalParallaxOverride = null)
 	{
 		if (!GlobalBackgroundStyleLoader.loaded || MenuLoader.loading) {
 			return;
@@ -317,9 +317,8 @@ public class SurfaceBackgroundStylesLoader : SceneEffectLoader<ModSurfaceBackgro
 		SkyManager.Instance.DrawToDepth(Main.spriteBatch, 1f / (float)Main.instance.bgParallax);
 
 		Main.instance.bgStartX = (int)(-Math.IEEERemainder(Main.screenPosition.X * Main.instance.bgParallax, Main.bgWidthScaled) - (Main.bgWidthScaled / 2));
-		/* TODO: Main.instance.screenOff no longer exists. Adjust this logic to new logic.
-		Main.instance.bgTopY = (int)((-Main.screenPosition.Y + Main.instance.screenOff / 2f) / (Main.worldSurface * 16.0) * a + b) + (int)Main.instance.scAdj;
-		*/
+		float verticalParallax = verticalParallaxOverride ?? ((300f - Main.screenPosition.Y) / ((float)Math.Max(1.0, Main.worldSurface) * 16f));
+		Main.instance.bgTopY = verticalParallax * a + b + Main.instance.scAdj;
 
 		if (Main.gameMenu) {
 			Main.instance.bgTopY = 320;

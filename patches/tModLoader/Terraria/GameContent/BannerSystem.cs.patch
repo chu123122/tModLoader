@@ -8,6 +8,15 @@
  using Terraria.Net;
  
  namespace Terraria.GameContent;
+@@ -25,7 +_,7 @@
+ 		{
+ 			NetPacket result = NetModule.CreatePacket<NetBannersModule>();
+ 			result.Writer.Write((byte)0);
+-			Save(result.Writer);
++			Save(result.Writer, networkSend: true);
+ 			return result;
+ 		}
+ 
 @@ -114,9 +_,13 @@
  	}
  
@@ -25,6 +34,37 @@
  	public static bool AnyNewClaimableBanners;
  
  	public static int GetKillCount(int banner) => killCount[banner];
+@@ -144,19 +_,19 @@
+ 		AnyNewClaimableBanners = false;
+ 	}
+ 
+-	public static void Save(BinaryWriter writer)
++	public static void Save(BinaryWriter writer, bool networkSend = false)
+ 	{
+-		writer.Write((short)killCount.Length);
+-		int[] array = killCount;
+-		foreach (int value in array) {
+-			writer.Write(value);
+-		}
++		// The .wld stores vanilla banner IDs only. Modded counts are saved by name in WorldIO;
++		// numeric ModNPC IDs may change when the enabled mod list changes. Networking needs all IDs.
++		int count = networkSend ? killCount.Length : MaxBannerTypes;
++		writer.Write((short)count);
++		for (int i = 0; i < count; i++)
++			writer.Write(killCount[i]);
+ 
+-		writer.Write((short)claimableBanners.Length);
+-		ushort[] array2 = claimableBanners;
+-		foreach (ushort value2 in array2) {
+-			writer.Write(value2);
+-		}
++		count = networkSend ? claimableBanners.Length : MaxBannerTypes;
++		writer.Write((short)count);
++		for (int i = 0; i < count; i++)
++			writer.Write(claimableBanners[i]);
+ 	}
+ 
+ 	public static void Load(BinaryReader reader, int version)
 @@ -285,8 +_,20 @@
  		}
  	}

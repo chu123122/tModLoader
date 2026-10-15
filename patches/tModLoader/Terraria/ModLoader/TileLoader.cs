@@ -1175,20 +1175,19 @@ public static class TileLoader
 		GetTile(type)?.ReplaceTile(i, j, targetType, targetStyle); // Do we want the reverse as well?
 	}
 
+	/// <summary>Queries dynamic crafting-station equivalences. Static ModTile.AdjTiles are stored in Recipe.TileCountsAs.</summary>
+	public static IEnumerable<int> GetAdjacentTileTypes(int type)
+	{
+		foreach (var hook in HookAdjTiles) {
+			foreach (int equivalent in hook(type))
+				yield return equivalent;
+		}
+	}
+
 	public static void AdjTiles(Player player, int type)
 	{
-		ModTile modTile = GetTile(type);
-		if (modTile != null) {
-			foreach (int k in modTile.AdjTiles) {
-				player.adjTile[k] = true;
-			}
-		}
-		foreach (var hook in HookAdjTiles) {
-			int[] adjTiles = hook(type);
-			foreach (int k in adjTiles) {
-				player.adjTile[k] = true;
-			}
-		}
+		foreach (int equivalent in GetAdjacentTileTypes(type))
+			player.SetAdjTile(equivalent);
 	}
 
 	public static bool RightClick(int i, int j)

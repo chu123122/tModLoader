@@ -93,7 +93,7 @@ public static class SteamedWraps
 		// Thus, for dedicated servers we delay game-server init until someone tries to use steam features (eg mod browser)
 
 		// Non-steam tModLoader will use the SteamGameServer to perform Browsing & Downloading
-		if (!Main.dedServ && !TryInitViaGameServer())
+		if (!Main.dedServ && !Program.LaunchParameters.ContainsKey("-nosteam") && !TryInitViaGameServer())
 			Utils.ShowFancyErrorMessage("Steam Game Server failed to Init. Steam Workshop downloading on GoG is unavailable. Make sure Steam is installed", Interface.loadModsID);
 	}
 

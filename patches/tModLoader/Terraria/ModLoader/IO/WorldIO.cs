@@ -326,14 +326,16 @@ internal static class WorldIO
 		var list = new List<TagCompound>();
 		for (int type = NPCID.Count; type < NPCLoader.NPCCount; type++) {
 			int killCount = BannerSystem.killCount[type];
-			if (killCount <= 0)
+			int claimable = BannerSystem.claimableBanners[type];
+			if (killCount <= 0 && claimable == 0)
 				continue;
 
 			ModNPC modNPC = NPCLoader.GetNPC(type);
 			list.Add(new TagCompound {
 				["mod"] = modNPC.Mod.Name,
 				["name"] = modNPC.Name,
-				["count"] = killCount
+				["count"] = killCount,
+				["claimable"] = claimable
 			});
 		}
 		return list;
@@ -344,6 +346,7 @@ internal static class WorldIO
 		foreach (var tag in list) {
 			if (ModContent.TryFind(tag.GetString("mod"), tag.GetString("name"), out ModNPC modNpc)) {
 				BannerSystem.killCount[modNpc.Type] = tag.GetInt("count");
+				BannerSystem.claimableBanners[modNpc.Type] = (ushort)Math.Clamp(tag.GetInt("claimable"), 0, ushort.MaxValue);
 			}
 			else {
 				ModContent.GetInstance<UnloadedSystem>().unloadedKillCounts.Add(tag);

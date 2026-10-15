@@ -1,6 +1,6 @@
 --- src/TerrariaNetCore/Terraria/DataStructures/ArmorSetBonuses.cs
 +++ src/tModLoader/Terraria/DataStructures/ArmorSetBonuses.cs
-@@ -2,6 +_,7 @@
+@@ -2,10 +_,11 @@
  using System.Linq;
  using Terraria.GameContent.Achievements;
  using Terraria.ID;
@@ -8,6 +8,11 @@
  
  namespace Terraria.DataStructures;
  
+-public class ArmorSetBonuses
++public partial class ArmorSetBonuses
+ {
+ 	public static class Benefits
+ 	{
 @@ -119,8 +_,11 @@
  			player.minionDamage += 0.15f;
  			player.whipRangeMultiplier += 0.3f;
@@ -52,9 +57,21 @@
  		}
  
  		public static void Platinum(Player player)
-@@ -564,7 +_,7 @@
+@@ -385,6 +_,8 @@
+ 
+ 	public static void Initialize()
+ 	{
++		All.Clear();
++		ArmorSetsFinishedPopulating = false;
+ 		Create(Benefits.Shroomite, "ArmorSetBonus.Shroomite").Set(1548, 1549, 1550).Set(1546, 1549, 1550).Set(1547, 1549, 1550)
+ 			.Add();
+ 
+@@ -563,8 +_,10 @@
+ 
  	public static void BuildLookup()
  	{
++		ArmorSetsFinishedPopulating = true;
++		ItemLoader.ModifyArmorSets();
  		ArmorSetBonus[] array = new ArmorSetBonus[0];
 -		SetsContaining = new ArmorSetBonus[ItemID.Count][];
 +		SetsContaining = new ArmorSetBonus[ItemLoader.ItemCount][];

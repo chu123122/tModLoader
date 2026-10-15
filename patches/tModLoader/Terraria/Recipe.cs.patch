@@ -22,7 +22,7 @@
  {
  	public struct RequiredItemEntry
  	{
-@@ -51,32 +_,44 @@
+@@ -51,35 +_,58 @@
  		}
  	}
  
@@ -36,11 +36,23 @@
 +	private static Recipe currentRecipe;
  	public Item createItem = new Item();
 -	public Item[] requiredItem = new Item[maxRequirements];
-+	// required... changed from [maxRequirements] to List
-+	public List<Item> requiredItem = new();
- 	public int requiredTile = -1;
+-	public int requiredTile = -1;
 -	public int[] acceptedGroups = new int[maxRequirements];
 -	public RequiredItemEntry[] requiredItemQuickLookup = new RequiredItemEntry[maxRequirements];
++	// required... changed from [maxRequirements] to List
++	public List<Item> requiredItem = new();
++	/// <summary>The crafting stations which must all be nearby to craft this recipe.</summary>
++	public List<int> requiredTiles = new();
++
++	// Preserve vanilla's single-station assignments while mod recipes use requiredTiles.
++	public int requiredTile {
++		get => requiredTiles.Count == 0 ? -1 : requiredTiles[0];
++		set {
++			requiredTiles.Clear();
++			if (value >= 0)
++				requiredTiles.Add(value);
++		}
++	}
 +	public List<int> acceptedGroups = new();
 +	internal RequiredItemEntry[] requiredItemQuickLookup; // TML private->internal
  	public List<Item> customShimmerResults;
@@ -82,7 +94,11 @@
 +
  	public bool DoesNotNeedTileOrLiquid {
  		get {
- 			if (requiredTile < 0 && !needHoney && !needWater)
+-			if (requiredTile < 0 && !needHoney && !needWater)
++			if (requiredTiles.Count == 0 && !needHoney && !needWater)
+ 				return !needLava;
+ 
+ 			return false;
 @@ -90,7 +_,7 @@
  	{
  		StringBuilder stringBuilder = new StringBuilder();
@@ -210,6 +226,19 @@
  				AddToAvailableRecipes(i);
  		}
  
+@@ -259,8 +_,10 @@
+ 	public bool PlayerMeetsEnvironmentConditions(Player player, List<string> missingObjects = null)
+ 	{
+ 		bool flag = true;
+-		if (requiredTile >= 0 && !player.adjTile[requiredTile])
+-			flag &= AddMissing(GetRequiredTileName(requiredTile), missingObjects);
++		foreach (int tile in requiredTiles) {
++			if (!player.adjTile[tile])
++				flag &= AddMissing(GetRequiredTileName(tile), missingObjects);
++		}
+ 
+ 		if (needWater && !player.adjWaterSource)
+ 			flag &= AddMissing(Lang.inter[53].Value, missingObjects);
 @@ -298,9 +_,35 @@
  		CollectItems(player.inventory, 58);
  		CollectItemsFromChests(player);
@@ -297,14 +326,53 @@
  				array[j].Refresh();
  			}
  		}
-@@ -501,6 +_,7 @@
+@@ -477,17 +_,20 @@
+ 
+ 	private static bool TileUsedInRecipeInherited(int tileType)
+ 	{
+-		if (TileUsedInRecipes[tileType])
+-			return true;
+-
+-		List<int> list = TileCountsAs[tileType];
+-		if (list != null) {
+-			foreach (int item in list) {
+-				if (TileUsedInRecipeInherited(item))
+-					return true;
++		var visited = new HashSet<int>();
++		var pending = new Stack<int>();
++		pending.Push(tileType);
++		while (pending.Count > 0) {
++			int current = pending.Pop();
++			if (!visited.Add(current))
++				continue;
++			if (TileUsedInRecipes[current])
++				return true;
++			if (TileCountsAs[current] is List<int> equivalents) {
++				foreach (int equivalent in equivalents)
++					pending.Push(equivalent);
+ 			}
+ 		}
+-
+ 		return false;
+ 	}
+ 
+@@ -501,8 +_,16 @@
  
  	public static void SetupRecipes()
  	{
 +		Recipe.SetupRecipeGroups(); // TML
  		Array.Clear(TileUsedInRecipes, 0, TileUsedInRecipes.Length);
  		SetupTileInheritance();
++		foreach (ModTile tile in TileLoader.tiles) {
++			foreach (int equivalent in tile.AdjTiles) {
++				if (equivalent < 0 || equivalent >= TileLoader.TileCount)
++					throw new Terraria.ModLoader.Exceptions.RecipeException($"Invalid adjacent tile {equivalent} declared by {tile.FullName}");
++				AddTileCountsAs(tile.Type, equivalent);
++			}
++		}
  		int num = 5;
+ 		int stack = 2;
+ 		currentRecipe.createItem.SetDefaults(8);
 @@ -15153,11 +_,19 @@
  		AddRecipe();
  		CreateReverseWallRecipes();
@@ -400,7 +468,7 @@
  	}
  
  	private static void AddSolarFurniture()
-@@ -16861,7 +_,7 @@
+@@ -16861,20 +_,22 @@
  	{
  		int num = numRecipes;
  		for (int i = 0; i < num; i++) {
@@ -409,7 +477,10 @@
  				currentRecipe.createItem.SetDefaults(Main.recipe[i].requiredItem[0].type);
  				currentRecipe.createItem.stack = Main.recipe[i].requiredItem[0].stack;
  				currentRecipe.requiredItem[0].SetDefaults(Main.recipe[i].createItem.type);
-@@ -16871,10 +_,12 @@
+ 				currentRecipe.requiredItem[0].stack = Main.recipe[i].createItem.stack;
+-				currentRecipe.requiredTile = Main.recipe[i].requiredTile;
++				currentRecipe.requiredTiles = new List<int>(Main.recipe[i].requiredTiles);
+ 				AddRecipe();
  				Recipe recipe = Main.recipe[numRecipes - 1];
  				for (int num2 = numRecipes - 2; num2 > i; num2--) {
  					Main.recipe[num2 + 1] = Main.recipe[num2];
@@ -422,7 +493,7 @@
  			}
  		}
  	}
-@@ -16883,7 +_,7 @@
+@@ -16883,25 +_,27 @@
  	{
  		int num = numRecipes;
  		for (int i = 0; i < num; i++) {
@@ -431,7 +502,10 @@
  				currentRecipe.createItem.SetDefaults(Main.recipe[i].requiredItem[0].type);
  				currentRecipe.createItem.stack = Main.recipe[i].requiredItem[0].stack;
  				currentRecipe.requiredItem[0].SetDefaults(Main.recipe[i].createItem.type);
-@@ -16893,15 +_,17 @@
+ 				currentRecipe.requiredItem[0].stack = Main.recipe[i].createItem.stack;
+-				currentRecipe.requiredTile = Main.recipe[i].requiredTile;
++				currentRecipe.requiredTiles = new List<int>(Main.recipe[i].requiredTiles);
+ 				AddRecipe();
  				Recipe recipe = Main.recipe[numRecipes - 1];
  				for (int num2 = numRecipes - 2; num2 > i; num2--) {
  					Main.recipe[num2 + 1] = Main.recipe[num2];
@@ -467,9 +541,11 @@
  			currentRecipe.alchemy = true;
  
  		Main.recipe[numRecipes] = currentRecipe;
+-		if (currentRecipe.requiredTile >= 0)
+-			TileUsedInRecipes[currentRecipe.requiredTile] = true;
 +		*/
- 		if (currentRecipe.requiredTile >= 0)
- 			TileUsedInRecipes[currentRecipe.requiredTile] = true;
++		foreach (int tile in currentRecipe.requiredTiles)
++			TileUsedInRecipes[tile] = true;
  
 +		/*
  		currentRecipe = new Recipe();
@@ -477,7 +553,7 @@
 +		*/
 +
 +		//TML: The whole method is rewritten.
-+		if (currentRecipe.requiredTile == TileID.Bottles)
++		if (currentRecipe.HasTile(TileID.Bottles))
 +			currentRecipe.AddConsumeIngredientCallback(IngredientQuantityRules.Alchemy);
 +
 +		static void ReplaceCondition(ref bool field, Condition cond)

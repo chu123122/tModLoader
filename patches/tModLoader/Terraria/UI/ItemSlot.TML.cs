@@ -10,123 +10,6 @@ public partial class ItemSlot
 	internal static bool IsModdedLoadoutShareContext(int context) => context is Context.ModdedAccessorySlot or Context.ModdedVanityAccessorySlot or Context.ModdedDyeSlot;
 	internal static bool CanModdedLoadoutShare(int context, int slot) => IsModdedLoadoutShareContext(context) && AccessorySlotLoader.ModSlotPlayer(Main.LocalPlayer).CanLoadoutShare(context, slot);
 
-	/* TODO: Restore functionality in ArmorSwap. Try new approach rather than just fixing compile issues.
-	private static bool AccessorySwap(Player player, Item item, ref Item result)
-	{
-		//TML: Rewrote ArmorSwap for accessories under the PR #1299 so it was actually readable. No vanilla functionality lost in transition
-		accSlotToSwapTo = -1;
-		var accLoader = LoaderManager.Get<AccessorySlotLoader>();
-		var accessories = AccessorySlotLoader.ModSlotPlayer(player).exAccessorySlot;
-
-		//TML: Check if there is an empty slot available in functional slots, and if not, track the last available slot
-		for (int i = 3; i < 10; i++) {
-			if (player.IsItemSlotUnlockedAndUsable(i)) {
-				if (player.armor[i].type == 0 && ItemLoader.CanEquipAccessory(item, i, false)) {
-					accSlotToSwapTo = i - 3;
-					break;
-				}
-			}
-		}
-
-		//TML: Check our modded functional slots
-		if (accSlotToSwapTo < 0) {
-			for (int i = 0; i < accessories.Length / 2; i++) {
-				if (accLoader.ModdedIsSpecificItemSlotUnlockedAndUsable(i, player, vanity: false)) {
-					if (accessories[i].type == 0 && accLoader.CanAcceptItem(i, item, (int)Context.ModdedAccessorySlot) && ItemLoader.CanEquipAccessory(item, i, true)) {
-						accSlotToSwapTo = i + 20;
-						break;
-					}
-				}
-			}
-		}
-
-		accLoader.ModifyDefaultSwapSlot(item, ref accSlotToSwapTo);
-
-		//TML: Check if there is an existing copy of the item in any slot (including vanity)
-		// Will also replace wings with wings
-		for (int j = 0; j < player.armor.Length; j++) {
-			if (item.IsTheSameAs(player.armor[j]) && ItemLoader.CanEquipAccessory(item, j, false))
-				accSlotToSwapTo = j - 3;
-
-			if (j < 10 && (item.wingSlot > 0 && player.armor[j].wingSlot > 0 || !ItemLoader.CanAccessoryBeEquippedWith(player.armor[j], item)) && ItemLoader.CanEquipAccessory(item, j, false))
-				accSlotToSwapTo = j - 3;
-		}
-
-		//TML: Do the same check for our modded slots
-		for (int j = 0; j < accessories.Length; j++) {
-			if (item.IsTheSameAs(accessories[j]) && accLoader.CanAcceptItem(j, item, j < accessories.Length / 2 ? (int)Context.ModdedAccessorySlot : (int)Context.ModdedVanityAccessorySlot) && ItemLoader.CanEquipAccessory(item, j, true))
-				accSlotToSwapTo = j + 20;
-
-			if (j < accLoader.list.Count && (item.wingSlot > 0 && accessories[j].wingSlot > 0 || !ItemLoader.CanAccessoryBeEquippedWith(accessories[j], item))
-				&& accLoader.CanAcceptItem(j, item, j < accessories.Length / 2 ? (int)Context.ModdedAccessorySlot : (int)Context.ModdedVanityAccessorySlot) && ItemLoader.CanEquipAccessory(item, j, true))
-				accSlotToSwapTo = j + 20;
-		}
-
-		// No slot found, and it can't go in slot zero, than return
-		if (accSlotToSwapTo == -1 && !ItemLoader.CanEquipAccessory(item, 0, false))
-			return false;
-
-		accSlotToSwapTo = Math.Max(accSlotToSwapTo, 0);
-		if (accSlotToSwapTo >= 20) {
-			int num3 = accSlotToSwapTo - 20;
-			if (isEquipLocked(accessories[num3].type)) {
-				result =  item;
-				return false;
-			}
-
-			if (!accLoader.ModSlotCheck(item, num3, Context.ModdedAccessorySlot)) {
-				return false;
-			}
-
-			result = accessories[num3].Clone();
-			accessories[num3] = item.Clone();
-		}
-		else {
-			int num3 = 3 + accSlotToSwapTo;
-			if (isEquipLocked(player.armor[num3].type)) {
-				result = item;
-				return false;
-			}
-
-			result = player.armor[num3].Clone();
-			player.armor[num3] = item.Clone();
-		}
-
-		return true;
-	}
-	*/
-
-	/// <summary>
-	/// Alters the ItemSlot.DyeSwap method for modded slots;
-	/// Unfortunately, I (Solxan) couldn't ever get ItemSlot.DyeSwap invoked so pretty sure this and its vanilla code is defunct.
-	/// Here in case someone proves my statement wrong later.
-	/// </summary>
-	private static Item ModSlotDyeSwap(Item item, out bool success)
-	{
-		Item item2 = item;
-		var msPlayer = AccessorySlotLoader.ModSlotPlayer(Main.LocalPlayer);
-		int dyeSlotCount = 0;
-		var dyes = msPlayer.exDyesAccessory;
-
-		for (int i = 0; i < dyeSlotCount; i++) {
-			if (dyes[i].type == 0) {
-				dyeSlotCount = i;
-				break;
-			}
-		}
-
-		if (dyeSlotCount >= msPlayer.SlotCount) {
-			success = false;
-			return item2;
-		}
-
-		item2 = dyes[dyeSlotCount].Clone();
-		dyes[dyeSlotCount] = item.Clone();
-
-		SoundEngine.PlaySound(7);
-		success = true;
-		return item2;
-	}
 
 	// Copy of Acc check, but runs hooks which take the local player as a context.
 	/// <inheritdoc cref="AccCheck_ForPlayer(Player, Item[], Item, int)"/>
@@ -134,44 +17,98 @@ public partial class ItemSlot
 
 	/// <summary>
 	/// Checks if placing <paramref name="item"/> into index <paramref name="slot"/> of <paramref name="itemCollection"/> works or not. <paramref name="itemCollection"/> corresponds to the <paramref name="player"/>'s accessories. 
-	/// <br/><br/> This is a replacement for <see cref="AccCheck(Item[], Item, int)"/> that takes into account player-specific checks and hooks.
+	/// <br/><br/> Checks vanilla incompatibility groups, modded accessory slots, and player-specific equipment hooks.
 	/// <br/><br/> Returns true if can't equip and false if placing the accessory is ok. 
 	/// </summary>
 	internal static bool AccCheck_ForPlayer(Player player, Item[] itemCollection, Item item, int slot)
 	{
-		/*
-		if (isEquipLocked(item.type))
-			return true;
-		*/
+		int modCount = AccessorySlotLoader.ModSlotPlayer(player).SlotCount;
+		bool modded = slot >= player.armor.Length;
+		bool targetVanity = modded ? slot >= player.armor.Length + modCount : slot >= 10;
+		for (int i = 3; i < itemCollection.Length; i++) {
+			if (i == slot || (i >= 10 && i < 13) || itemCollection[i].IsAir)
+				continue;
 
-		if (slot != -1) {
-			if (!itemCollection[slot].IsNotTheSameAs(item))
-				return false;
+			Item existing = itemCollection[i];
+			int incompatibility = Terraria.ID.ItemID.Sets.AccessoryIncompatibilityType[item.type];
+			// Identity and the vanilla incompatibility group apply across functional and vanity slots.
+			if (existing.type == item.type || (incompatibility != -1 && incompatibility == Terraria.ID.ItemID.Sets.AccessoryIncompatibilityType[existing.type]))
+				return true;
 
-			if (itemCollection[slot].wingSlot > 0 && item.wingSlot > 0 || !ItemLoader.CanAccessoryBeEquippedWith(player, itemCollection[slot], item))
-				return !ItemLoader.CanEquipAccessory(player, item, slot >= 20 ? slot - 20 : slot, slot >= 20);
-		}
-
-		var modSlotPlayer = AccessorySlotLoader.ModSlotPlayer(player);
-		var modCount = modSlotPlayer.SlotCount;
-		bool targetVanity = slot >= 20 && (slot >= modCount + 20) || slot < 20 && slot >= 10;
-
-		for (int i = targetVanity ? 13 : 3; i < (targetVanity ? 20 : 10); i++) {
-			if (!targetVanity && item.wingSlot > 0 && itemCollection[i].wingSlot > 0 || !ItemLoader.CanAccessoryBeEquippedWith(player, itemCollection[i], item))
+			bool existingVanity = i >= player.armor.Length ? i >= player.armor.Length + modCount : i >= 10;
+			if (existingVanity == targetVanity && (!CanEquipBothAccessories(existing, item, targetVanity) || !ItemLoader.CanAccessoryBeEquippedWith(player, existing, item)))
 				return true;
 		}
 
-		for (int i = (targetVanity ? modCount : 0) + 20; i < (targetVanity ? modCount * 2 : modCount) + 20; i++) {
-			if (!targetVanity && item.wingSlot > 0 && itemCollection[i].wingSlot > 0 || !ItemLoader.CanAccessoryBeEquippedWith(player, itemCollection[i], item))
-				return true;
+		return !ItemLoader.CanEquipAccessory(player, item, modded ? slot - player.armor.Length : slot, modded);
+	}
+
+	private static Item QuickAccessorySwap(Player player, Item item, out bool success, out int targetSlot)
+	{
+		success = false;
+		targetSlot = -1;
+		var slots = AccessorySlotLoader.ModSlotPlayer(player);
+		var loader = LoaderManager.Get<AccessorySlotLoader>();
+		Item[] combined = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(player.armor, slots.exAccessorySlot));
+		var candidates = new System.Collections.Generic.List<int>();
+		int nativeOffset = item.vanity ? 13 : 3;
+		for (int i = nativeOffset; i < nativeOffset + 7; i++)
+			candidates.Add(i);
+		int modOffset = player.armor.Length + (item.vanity ? slots.SlotCount : 0);
+		for (int i = 0; i < slots.SlotCount; i++)
+			candidates.Add(modOffset + i);
+
+		bool CanUse(int index) {
+			if (index < player.armor.Length)
+				return player.IsItemSlotUnlockedAndUsable(index) && !AccCheck_ForPlayer(player, combined, item, index);
+
+			int modIndex = index - player.armor.Length;
+			int context = item.vanity ? Context.ModdedVanityAccessorySlot : Context.ModdedAccessorySlot;
+			return loader.ModdedIsSpecificItemSlotUnlockedAndUsable(modIndex % slots.SlotCount, player, item.vanity)
+				&& loader.CanPlayerAcceptItem(player, modIndex, item, context)
+				&& !AccCheck_ForPlayer(player, combined, item, index);
 		}
 
-		for (int i = 0; i < itemCollection.Length; i++) {
-			if (!item.IsNotTheSameAs(itemCollection[i]))
-				return true;
+		foreach (int index in candidates) {
+			if (!combined[index].IsAir && (!CanEquipBothAccessories(combined[index], item, item.vanity) || !ItemLoader.CanAccessoryBeEquippedWith(player, combined[index], item))) {
+				// More than one conflict cannot be resolved by swapping a single slot.
+				if (targetSlot != -1 || !CanUse(index))
+					return item;
+				targetSlot = index;
+			}
 		}
 
-		return !ItemLoader.CanEquipAccessory(player, item, slot >= 20 ? slot - 20 : slot, slot >= 20);
+		if (targetSlot == -1) {
+			foreach (int index in candidates) {
+				if (combined[index].IsAir && CanUse(index)) { targetSlot = index; break; }
+			}
+		}
+		if (!item.vanity) {
+			int preferred = targetSlot >= player.armor.Length ? targetSlot : targetSlot >= 3 ? targetSlot - 3 : -1;
+			// An existing conflict takes priority over default slot preferences.
+			if (!candidates.Exists(i => !combined[i].IsAir && (!CanEquipBothAccessories(combined[i], item, false) || !ItemLoader.CanAccessoryBeEquippedWith(player, combined[i], item)))) {
+				loader.ModifyDefaultSwapSlot(item, ref preferred);
+				int preferredIndex = preferred >= player.armor.Length ? preferred : preferred >= 0 ? preferred + 3 : -1;
+				if (candidates.Contains(preferredIndex) && CanUse(preferredIndex))
+					targetSlot = preferredIndex;
+			}
+		}
+
+		if (targetSlot == -1) {
+			foreach (int index in candidates) {
+				if (CanUse(index)) { targetSlot = index; break; }
+			}
+		}
+		if (targetSlot == -1)
+			return item;
+
+		SoundEngine.PlaySound(7);
+		if (targetSlot < player.armor.Length)
+			SwapClearFavorite(ref item, ref player.armor[targetSlot]);
+		else
+			SwapClearFavorite(ref item, ref slots.exAccessorySlot[targetSlot - player.armor.Length]);
+		success = true;
+		return item;
 	}
 
 	private static bool CanEquipInModdedAccessorySlot(Item checkItem, int slot, int context, bool vanity)
