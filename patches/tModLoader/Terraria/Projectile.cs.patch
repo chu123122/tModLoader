@@ -718,7 +718,7 @@
  		return projectile.whoAmI;
  	}
  
-@@ -9954,26 +_,81 @@
+@@ -9954,26 +_,75 @@
  		}
  	}
  
@@ -748,13 +748,10 @@
  			bonusTagDamage += item.bonusTagDamage;
  			armorPenetration += item.armorPenetration;
 -			if (item.type == 2269 && entitySource_ItemUse.Entity is Player) {
-+			if (item.type == 2269/* && entitySource_ItemUse.Entity is Player*/) {
-+				/*
- 				Player player = (Player)entitySource_ItemUse.Entity;
- 				bonusCritChance += player.revolverCritChanceBonus;
-+				*/
-+				CritChance += player.revolverCritChanceBonus;
- 			}
+-				Player player = (Player)entitySource_ItemUse.Entity;
+-				bonusCritChance += player.revolverCritChanceBonus;
+-			}
++			// The revolver bonus is included by player.GetWeaponCrit(item) below.
 +
 +			// TML added:
 +			// Apply the weapon and player bonuses to the base stats
@@ -938,7 +935,7 @@
  
  			Main.player[owner].TryConsumingTimerCrit(targetNPC.Hitbox, ref crit);
  			int num14 = type;
-@@ -11345,7 +_,12 @@
+@@ -11345,20 +_,16 @@
  			}
  		}
  
@@ -947,19 +944,20 @@
 +		*/
 +		modifiers.SourceDamage *= num7 / 1000;
 +
-+		/*
  		TagDamageChanges changes = TagDamageChanges.None;
  		Main.player[owner].TagEffectStack.ModifyHit(this, targetNPC, ref changes);
- 		if (changes.AddProjectileTagDamage) {
-@@ -11359,6 +_,13 @@
- 			if (changes.Crit.HasValue)
- 				crit = changes.Crit.Value;
- 		}
-+		*/
-+		// Most changes applied directly to modifiers in WhipTagEffect.ModifyTaggedHit
-+		var changes = new { AddProjectileTagDamage = Main.player[owner].TagEffectStack.IsTaggedHit(this, targetNPC) };
-+		if (changes.AddProjectileTagDamage)
-+			modifiers.FlatBonusDamage += bonusTagDamage * ProjectileID.Sets.SummonTagDamageMultiplier[type];
+-		if (changes.AddProjectileTagDamage) {
+-			int highestAddedBaseDamage = changes.HighestAddedBaseDamage;
+-			int num16 = changes.AddedBaseDamage - highestAddedBaseDamage;
+-			float num17 = 1f;
+-			float num18 = (float)highestAddedBaseDamage + (float)num16 * num17;
+-			num15 += (int)((num18 + (float)bonusTagDamage) * ProjectileID.Sets.SummonTagDamageMultiplier[type]);
+-			num15 += changes.AddedFlatDamage;
+-			num15 = (int)((float)num15 * changes.TotalDamageMultiplier);
+-			if (changes.Crit.HasValue)
+-				crit = changes.Crit.Value;
+-		}
++		changes.ApplyTo(ref modifiers, type, damage, bonusTagDamage);
 +
 +		Main.player[owner].TagEffectStack.ModifyHit(this, targetNPC, ref modifiers);
  
@@ -1073,7 +1071,7 @@
  		switch (type) {
  			case 697:
  			case 699:
-@@ -11961,8 +_,23 @@
+@@ -11961,12 +_,29 @@
  		if (type == 22)
  			num40 = ((Main.player[owner].Center.X < targetNPC.Center.X) ? 1 : (-1));
  
@@ -1082,6 +1080,9 @@
 +		modifiers.TargetDamageMultiplier *= dmg / 1000;
 +		if (num40 != null)
 +			modifiers.HitDirectionOverride = num40;
++
++		if (ownedBySomeone && (melee || ProjectileID.Sets.IsAWhip[type]) && Main.player[owner].meleeEnchant == 6)
++			modifiers.FinalDamage *= Player.GetNanoFlaskDamageBoost();
 +
 +		var strike = modifiers.ToHitInfo(damage, crit, num5, damageVariation: true, luck: ownedBySomeone ? Main.player[owner].luck : 0);
 +		num40 = strike.HitDirection;
@@ -1096,7 +1097,12 @@
 +		*/
  
  		if (ownedBySomeone && (melee || ProjectileID.Sets.IsAWhip[type])) {
- 			if (Main.player[owner].meleeEnchant == 6)
+-			if (Main.player[owner].meleeEnchant == 6)
+-				dmg = (int)((float)dmg * Player.GetNanoFlaskDamageBoost());
++			// Nano flask damage is applied before ToHitInfo above.
+ 
+ 			if (Main.player[owner].meleeEnchant == 7)
+ 				NewProjectile(GetProjectileSource_FromThis(), targetNPC.Center.X, targetNPC.Center.Y, targetNPC.velocity.X, targetNPC.velocity.Y, 289, 0, 0f, owner);
 @@ -11976,14 +_,20 @@
  		NPCDamageTracker.SetSourceForNextHit(targetNPC, PlayerNPCHitSource.FromProjectile(type));
  		Invariant.Assert(Main.netMode == 0 || owner == Main.myPlayer, "Cannot simulate someone else's projectile dealing damage. ({0})", this);

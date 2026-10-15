@@ -45,7 +45,7 @@
 +		if (_lastTip != null)
 +			list.RemoveAll(tip => tip.TipText == _lastTip);
 +		
-+		list.RemoveAll(tip => !tip.isVisible);
++		list.RemoveAll(tip => !tip.isVisible || !tip.TipText.ConditionsMet);
 +
 +		if (list.Count == 0)
 +			_lastTip = LocalizedText.Empty;

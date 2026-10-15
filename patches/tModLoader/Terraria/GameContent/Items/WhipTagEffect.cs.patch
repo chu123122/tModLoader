@@ -67,38 +67,16 @@
  	public override void OnTagAppliedToNPC(Player player, NPC npc)
  	{
  		if (player == Main.LocalPlayer)
-@@ -47,17 +_,45 @@
+@@ -47,6 +_,7 @@
  		}
  	}
  
-+	/*
++	/// <summary>Accumulates tag damage and critical strikes using the vanilla 1.4.5 rules.</summary>
  	public override void ModifyTaggedHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref TagDamageChanges changes)
-+	*/
-+	/// <summary>
-+	/// Allows the damage dealt to be modified when a tagged enemy takes damage from a minion, sentry, or one of their projectiles.
-+	/// <br/> This automatically handles the <see cref="TagDamage"/> and <see cref="CritChance"/> fields.
-+	/// <para> Make sure to add <c>base.ModifyTaggedHit(owner, optionalProjectile, npcHit, ref modifiers);</c> in order for those calculations to take place.</para>
-+	/// </summary>
-+	/// <param name="owner">The player who inflicted the tag effect.</param>
-+	/// <param name="optionalProjectile">The projectile that hit the NPC.</param>
-+	/// <param name="npcHit">The NPC who was hit.</param>
-+	/// <param name="modifiers">The original damage that was dealt to the NPC.</param>
-+	public override void ModifyTaggedHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref NPC.HitModifiers modifiers)
  	{
-+		/*
  		changes.AddProjectileTagDamage = true;
- 		changes.AddedBaseDamage += TagDamage;
- 		if (changes.HighestAddedBaseDamage < TagDamage)
- 			changes.HighestAddedBaseDamage = TagDamage;
-+		*/
-+
-+		modifiers.FlatBonusDamage += TagDamage * ProjectileID.Sets.SummonTagDamageMultiplier[optionalProjectile.type];
- 
- 		if (Main.rand.Next(100) < CritChance)
-+			/*
+@@ -58,6 +_,15 @@
  			changes.Crit = true;
-+			*/
-+			modifiers.SetCrit();
  	}
  
 +	/// <summary>

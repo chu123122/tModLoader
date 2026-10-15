@@ -1582,14 +1582,16 @@
  		int num = 0;
  		if (sItem.autoReuse && sItem.reuseDelay == 0 && sItem.useTime <= sItem.useAnimation && sItem.shoot > 0 && sItem.useStyle == 5)
  			num = 1;
-@@ -2874,6 +_,26 @@
+@@ -2874,6 +_,28 @@
  		}
  
  		reuseDelay = sItem.reuseDelay;
 +		*/
 +
 +		//TODO: Just merge the tile/wall speed into TotalUseSpeedMultiplier?
-+		if (sItem.createTile >= 0)
++		if (DebugOptions.ManaV2 && sItem.mana > 0 && slowMagicUse)
++			ApplyItemAnimation(sItem, GetSlowMagicMultiplier());
++		else if (sItem.createTile >= 0)
 +			ApplyItemAnimation(sItem, tileSpeed);
 +		else if (sItem.createWall >= 0)
 +			ApplyItemAnimation(sItem, wallSpeed);
@@ -4018,7 +4020,7 @@
  				bool flag12 = false;
 -				bool flag13 = false;
 +				*/
-+				bool flag13 = false; // TODO: isPerformingJump_DownDash needs integration.
++				bool flag13 = !(wet && accFlipper) && !flag && hasDeadCellsDownDash && controlDown && !isPerformingJump_DownDash && velocity.Y != 0f && !mount.Active;
 +				/*
  				if (!flag2 && !flag) {
  					if (canJumpAgain_Basilisk) {
@@ -4533,7 +4535,7 @@
  			rangedCrit += (int)((1f - num26) * 10f);
 +
 +			// Stealth knockback. Moved from GetWeaponKnockback
-+			GetKnockback(DamageClass.Ranged) *= 1f + (1f - num26) * 0.5f;
++			GetKnockback(DamageClass.Ranged) *= 1f + (1f - stealth) * 0.5f;
 +
  			aggro -= (int)((1f - num26) * 750f);
  			if (stealthTimer > 0)
@@ -4695,7 +4697,7 @@
 +				/*
  				if ((wingTime == 0f || wingsLogic == 0) && rocketBoots != 0 && controlJump && rocketDelay == 0 && canRocket && rocketRelease && CanUseBootFlyingAbilities) {
 +				*/
-+				if ((wingTime == 0f || wingsLogic == 0) && rocketBoots != 0 && controlJump && rocketDelay == 0 && canRocket && rocketRelease && !AnyExtraJumpUsable()) {
++				if ((wingTime == 0f || wingsLogic == 0) && rocketBoots != 0 && controlJump && rocketDelay == 0 && canRocket && rocketRelease && CanUseBootFlyingAbilities && !AnyExtraJumpUsable()) {
  					if (rocketTime > 0) {
  						rocketTime--;
  						rocketDelay = 10;
@@ -5785,7 +5787,7 @@
  			if (player != null) {
  				num2 = (int)(num2 * 0.75);
 +			*/
-+			{
++			if (player != null) {
 +				int damage = info.Damage / 3; // Damage has already been reduced by 1/4 when applying to target player, so dividing by 3 gives us the correct value
  				if (player == Main.LocalPlayer && num8 < PaladinsShieldRange)
  					Main.LocalPlayer.Hurt(PlayerDeathReason.ByOther(20), damage, 0, pvp: false, quiet: false, Crit: false, ImmunityCooldownID.PaladinsShield, dodgeable: false);
@@ -7932,7 +7934,7 @@
  		return 0;
 +		*/
 +
-+		float crit = sItem.crit + GetTotalCritChance(sItem.DamageType);
++		float crit = sItem.GetVisualCritChance(this) + GetTotalCritChance(sItem.DamageType);
 +		CombinedHooks.ModifyWeaponCrit(this, sItem, ref crit);
 +		return (int)(crit + 5E-06f);
  	}
@@ -8128,7 +8130,7 @@
  		}
  
  		if (inventory[selectedItem].type == 2888 && projToShoot == 1)
-@@ -44786,8 +_,12 @@
+@@ -44786,13 +_,13 @@
  			num += num2;
  		}
  
@@ -8139,15 +8141,23 @@
  			Damage += (int)((float)num * GetWeaponDamageMultiplier(item));
 +		*/
  
- 		if (projToShoot == 285) {
- 			float num3 = 1.25f;
-@@ -44809,7 +_,61 @@
+-		if (projToShoot == 285) {
+-			float num3 = 1.25f;
+-			Damage = (int)((float)Damage * num3);
+-		}
+ 
+ 		if (AmmoID.Sets.IsArrow[item.ammo] && archery && speed < 20f) {
+ 			speed *= 1.2f;
+@@ -44809,7 +_,64 @@
  				ammoCyclingOffset = Main.rand.Next();
  		}
  
 +
 +		ItemLoader.PickAmmo(sItem, item, this, ref projToShoot, ref speed, ref ammoDamage, ref KnockBack);
 +		totalDamage = (int)(ammoDamage.ApplyTo(item.damage) + 5E-06f);
++		if (projToShoot == 285)
++			totalDamage = (int)(totalDamage * 1.25f);
++
 +
 +		if (!dontConsume && !shootWithNoAmmo && item.consumable && !IsAmmoFreeThisShot(sItem, item, projToShoot)) {
 +			CombinedHooks.OnConsumeAmmo(this, sItem, item);

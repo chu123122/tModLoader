@@ -514,6 +514,7 @@ public partial class Player : IEntityWithInstances<ModPlayer>
 	/// <returns><see langword="true"/> if the player has enough mana to use the item, <see langword="false"/> otherwise.</returns>
 	public bool CheckMana(Item item, int amount = -1, bool pay = false, bool blockQuickMana = false)
 	{
+		slowMagicUse = false;
 		if (amount <= -1)
 			amount = GetManaCost(item);
 
@@ -526,12 +527,11 @@ public partial class Player : IEntityWithInstances<ModPlayer>
 			return true;
 		}
 
-		if (blockQuickMana)
-			return false;
-
-		CombinedHooks.OnMissingMana(this, item, amount);
-		if (statMana < amount && manaFlower)
-			QuickMana();
+		if (!blockQuickMana) {
+			CombinedHooks.OnMissingMana(this, item, amount);
+			if (statMana < amount && manaFlower)
+				QuickMana();
+		}
 
 		if (statMana >= amount) {
 			if (pay) {
@@ -542,8 +542,13 @@ public partial class Player : IEntityWithInstances<ModPlayer>
 			return true;
 		}
 
-		return false;
+		if (Terraria.Testing.DebugOptions.ManaV2) {
+			statMana = 0;
+			DoRunOutOfManaEffect();
+			return true;
+		}
 
+		return false;
 	}
 
 	/// <summary>

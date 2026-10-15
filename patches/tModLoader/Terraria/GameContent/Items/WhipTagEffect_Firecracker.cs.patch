@@ -7,21 +7,8 @@
  
  namespace Terraria.GameContent.Items;
  
-@@ -6,14 +_,25 @@
- {
- 	private static float ProcDamageMultiplier = 2.75f;
- 
-+	/*
- 	public override void ModifyProcHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref TagDamageChanges changes)
-+	*/
-+	public override void ModifyProcHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref NPC.HitModifiers modifiers)
- 	{
-+		base.ModifyProcHit(owner, optionalProjectile, npcHit, ref modifiers);
-+		/*
+@@ -11,9 +_,12 @@
  		changes.TotalDamageMultiplier *= ProcDamageMultiplier;
-+		*/
-+		// Unlike vanilla, this doesn't multiply tag damage, since that is applied as FlatBonusDamage, but this should never really amtter for balance
-+		modifiers.ScalingBonusDamage += (ProcDamageMultiplier - 1f) * ProjectileID.Sets.SummonTagDamageMultiplier[optionalProjectile.type];
  	}
  
 +	/*

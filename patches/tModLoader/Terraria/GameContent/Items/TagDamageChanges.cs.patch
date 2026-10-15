@@ -1,14 +1,27 @@
 --- src/TerrariaNetCore/Terraria/GameContent/Items/TagDamageChanges.cs
 +++ src/tModLoader/Terraria/GameContent/Items/TagDamageChanges.cs
-@@ -1,5 +_,6 @@
- namespace Terraria.GameContent.Items;
+@@ -9,6 +_,24 @@
+ 	public bool? Crit;
+ 	public int HighestAddedBaseDamage;
  
-+/*
- public struct TagDamageChanges
- {
- 	public bool AddProjectileTagDamage;
-@@ -17,3 +_,4 @@
- 		}
- 	}
- }
-+*/
++	/// <summary>Combines vanilla tag contributions before applying damage modifiers.</summary>
++	public void ApplyTo(ref NPC.HitModifiers modifiers, int projectileType, float baseDamage, int bonusTagDamage = 0)
++	{
++		if (!AddProjectileTagDamage)
++			return;
++
++		int tagDamage = (int)((AddedBaseDamage + bonusTagDamage) * Terraria.ID.ProjectileID.Sets.SummonTagDamageMultiplier[projectileType]);
++		// Vanilla passes pre-tag source damage to on-hit procs (e.g. Firecracker's explosion).
++		// Keep SourceDamage intact while applying the combined and rounded tag result to the hit.
++		float sourceDamage = modifiers.SourceDamage.ApplyTo(baseDamage);
++		int combinedDamage = (int)(((int)sourceDamage + tagDamage + AddedFlatDamage) * TotalDamageMultiplier);
++		modifiers.FlatBonusDamage += combinedDamage - sourceDamage;
++		if (Crit == true)
++			modifiers.SetCrit();
++		else if (Crit == false)
++			modifiers.DisableCrit();
++	}
++
+ 	public static TagDamageChanges None {
+ 		get {
+ 			TagDamageChanges result = default(TagDamageChanges);

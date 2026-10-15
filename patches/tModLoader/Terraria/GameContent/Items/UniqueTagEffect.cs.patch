@@ -1,6 +1,6 @@
 --- src/TerrariaNetCore/Terraria/GameContent/Items/UniqueTagEffect.cs
 +++ src/tModLoader/Terraria/GameContent/Items/UniqueTagEffect.cs
-@@ -1,36 +_,118 @@
+@@ -1,36 +_,120 @@
 +using Terraria.ModLoader;
 +
  namespace Terraria.GameContent.Items;
@@ -49,9 +49,10 @@
 +	/// <returns><see langword="true"/> by default.</returns>
  	public virtual bool CanRunHitEffects(Player owner, Projectile optionalProjectile, NPC npcHit) => true;
  
-+	/*
++	/// <summary>Accumulates vanilla tag effects before their damage is combined. Called before the HitModifiers overload.</summary>
  	public virtual void ModifyTaggedHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref TagDamageChanges changes)
-+	*/
+ 	{
+ 	}
 +	/// <summary>
 +	/// Allows the damage dealt to be modified when a tagged enemy takes damage from a minion, sentry, or one of their projectiles.
 +	/// </summary>
@@ -60,12 +61,13 @@
 +	/// <param name="npcHit">The NPC who was hit.</param>
 +	/// <param name="modifiers">The original damage that was dealt to the NPC.</param>
 +	public virtual void ModifyTaggedHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref NPC.HitModifiers modifiers)
++	{
++	}
+ 
++	/// <summary>Accumulates vanilla tag effects before their damage is combined. Called before the HitModifiers overload.</summary>
+ 	public virtual void ModifyProcHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref TagDamageChanges changes)
  	{
  	}
- 
-+	/*
- 	public virtual void ModifyProcHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref TagDamageChanges changes)
-+	*/
 +	/// <summary>
 +	/// Allows the damage dealt to be modified when a tag effect triggers on a tagged enemy.
 +	/// <para>In order for a tag effect to proc, apply the following or similar code in <see cref="ModProjectile.OnHitNPC(NPC, NPC.HitInfo, int)"/>
@@ -82,8 +84,8 @@
 +	/// <param name="modifiers">The original damage that was dealt to the NPC.</param>
 +	/// <remarks>Procs will be removed from the NPC once they activate.</remarks>
 +	public virtual void ModifyProcHit(Player owner, Projectile optionalProjectile, NPC npcHit, ref NPC.HitModifiers modifiers)
- 	{
- 	}
++	{
++	}
  
 +	/*
  	public virtual void OnTaggedHit(Player owner, Projectile optionalProjectile, NPC npcHit, int calcDamage)
