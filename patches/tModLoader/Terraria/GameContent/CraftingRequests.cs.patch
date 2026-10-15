@@ -109,3 +109,13 @@
  			return;
  		}
  
+@@ -313,6 +_,9 @@
+ 			}
+ 		}
+ 	}
++
++	// Local save support only. Packet handling and request processing are unchanged.
++	internal static IEnumerable<Item> PossibleRefundItems => _pendingCrafts.SelectMany(c => c.consumed);
+ 
+ 	public static void SavePossibleRefunds(BinaryWriter writer)
+ 	{

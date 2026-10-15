@@ -53,6 +53,7 @@ internal static class PlayerIO
 			["bank3"] = SaveInventory(player.bank3.item),
 			["bank4"] = SaveInventory(player.bank4.item),
 			["temporaryItemSlots"] = SaveInventory(_temporaryItemSlots),
+			["pendingRefunds"] = player._pendingRefunds.Concat(player == Main.LocalPlayer ? Terraria.GameContent.CraftingRequests.PossibleRefundItems : Enumerable.Empty<Item>()).Select(ItemIO.Save).ToList(),
 			["hairDye"] = SaveHairDye(player.hairDye),
 			["research"] = SaveResearch(player),
 			["modData"] = SaveModData(player),
@@ -79,6 +80,8 @@ internal static class PlayerIO
 		LoadInventory(player.bank3.item, tag.GetList<TagCompound>("bank3"));
 		LoadInventory(player.bank4.item, tag.GetList<TagCompound>("bank4"));
 		LoadInventory(player._temporaryItemSlots, tag.GetList<TagCompound>("temporaryItemSlots"));
+		if (tag.ContainsKey("pendingRefunds"))
+			player._pendingRefunds = tag.GetList<TagCompound>("pendingRefunds").Select(ItemIO.Load).ToArray();
 		LoadHairDye(player, tag.GetString("hairDye"));
 		LoadResearch(player, tag.GetList<TagCompound>("research"));
 		LoadModData(player, tag.GetList<TagCompound>("modData"));

@@ -1291,15 +1291,17 @@
  	public float luck;
  	public float luckMinimumCap = -0.7f;
  	public float luckMaximumCap = 1f;
-@@ -1866,7 +_,7 @@
+@@ -1866,8 +_,8 @@
  	private const int SaveSlotIndex_GuideItem = 2;
  	private const int SaveSlotIndex_TinkererItem = 3;
  	private const int SaveSlotIndexCount = 4;
 -	private Item[] _temporaryItemSlots = new Item[4];
+-	private Item[] _pendingRefunds = new Item[0];
 +	internal Item[] _temporaryItemSlots = new Item[4];
- 	private Item[] _pendingRefunds = new Item[0];
++	internal Item[] _pendingRefunds = new Item[0]; // Persist full item data in the .tplr sidecar.
  	private static readonly PlayerFileData _visualCloneDummyData = new PlayerFileData();
  	private static readonly MemoryStream _visualCloneStream = new MemoryStream();
+ 	private static readonly BinaryWriter _visualCloneWriter = new BinaryWriter(_visualCloneStream);
 @@ -1951,6 +_,10 @@
  
  	public float BaseHeight => height - HeightOffsetBoost;
@@ -2741,7 +2743,7 @@
  	public void BuffHandle_SpawnPetIfNeededAndSetTime(int buffIndex, ref bool petBool, int petProjID, int buffTimeToGive = 18000)
  	{
  		buffTime[buffIndex] = buffTimeToGive;
-@@ -9863,9 +_,12 @@
+@@ -9863,25 +_,27 @@
  		accStopwatch = false;
  		accOreFinder = false;
  		accDreamCatcher = false;
@@ -2755,12 +2757,12 @@
  			if (type == 4131)
  				flag = true;
  		}
-@@ -9873,15 +_,15 @@
+ 
  		for (int j = 0; j < 20; j++) {
  			if (IsItemSlotUnlockedAndUsable(j)) {
- 				int type2 = GetEffectiveArmor(j).type;
+-				int type2 = GetEffectiveArmor(j).type;
 -				RefreshInfoAccsFromItemType(type2);
-+				RefreshInfoAccsFromItemType(armor[j]);
++				RefreshInfoAccsFromItemType(GetEffectiveArmor(j));
  			}
  		}
  
@@ -3265,7 +3267,7 @@
  	}
  
  	private void SpawnHallucination(Item item)
-@@ -11297,6 +_,12 @@
+@@ -11297,8 +_,14 @@
  
  	private void ApplyEquipVanity(int itemSlot, Item currentItem)
  	{
@@ -3276,8 +3278,11 @@
 +	public void ApplyEquipVanity(Item currentItem)
 +	{
  		int type = currentItem.type;
- 		RefreshInfoAccsFromItemType(type);
+-		RefreshInfoAccsFromItemType(type);
++		RefreshInfoAccsFromItemType(currentItem);
  		if (currentItem.wingSlot > 0)
+ 			wings = currentItem.wingSlot;
+ 
 @@ -11336,6 +_,8 @@
  
  		if (currentItem.type == 5077)
