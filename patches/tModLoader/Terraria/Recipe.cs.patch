@@ -239,15 +239,25 @@
  
  		if (needWater && !player.adjWaterSource)
  			flag &= AddMissing(Lang.inter[53].Value, missingObjects);
-@@ -298,9 +_,35 @@
+@@ -292,15 +_,45 @@
+ 		return false;
+ 	}
+ 
++	private static readonly HashSet<Item> _collectedCraftingItemReferences = new(ReferenceEqualityComparer.Instance);
++
+ 	private static void CollectItemsToCraftWithFrom(Player player)
+ 	{
+ 		_ownedItems.Clear();
++		_collectedCraftingItemReferences.Clear();
  		CollectItems(player.inventory, 58);
  		CollectItemsFromChests(player);
- 		AddFakeCountsForItemGroups();
 +
-+		foreach ((var items, _) in PlayerLoader.GetModdedCraftingMaterials(Main.LocalPlayer)) {
++		foreach ((var items, _) in PlayerLoader.GetModdedCraftingMaterials(player)) {
 +			CollectItems(items);
 +		}
 +
++		_collectedCraftingItemReferences.Clear();
+ 		AddFakeCountsForItemGroups();
  		CraftingRequests.SubtractPendingRequests();
  	}
  
@@ -275,7 +285,7 @@
  	private static void CollectItemsFromChests(Player player)
  	{
  		_recipeChests.Clear();
-@@ -337,8 +_,17 @@
+@@ -337,9 +_,18 @@
  
  	private static void CollectItems(Item[] currentInventory, int slotCap)
  	{
@@ -288,11 +298,13 @@
 +		/*
  		for (int i = 0; i < slotCap; i++) {
  			Item item = currentInventory[i];
+-			if (item.stack > 0) {
 +		*/
 +		foreach (var item in items) {
- 			if (item.stack > 0) {
++			if (item.stack > 0 && _collectedCraftingItemReferences.Add(item)) {
  				int num = item.stack;
  				if (_ownedItems.TryGetValue(item.type, out var value))
+ 					num += value;
 @@ -363,7 +_,10 @@
  			if (recipe.createItem.type == 0)
  				break;

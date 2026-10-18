@@ -1,3 +1,4 @@
 *.sh text eol=lf
 solutions/ReleaseExtras/LegacyFrameWork/tModLoader-mono text eol=lf
 solutions/ReleaseExtras/LegacyFrameWork/tModLoader-kick text eol=lf
+personal/native/*.patch text eol=lf

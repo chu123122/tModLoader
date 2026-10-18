@@ -13,6 +13,7 @@ using Terraria.GameContent;
 using Terraria.GameContent.Golf;
 using Terraria.GameContent.Items;
 using Terraria.GameContent.Prefixes;
+using Terraria.Graphics.Renderers;
 using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader.Core;
@@ -82,6 +83,10 @@ public static class ItemLoader
 		//Textures
 		Array.Resize(ref TextureAssets.Item, ItemCount);
 		Array.Resize(ref TextureAssets.ItemFlame, ItemCount);
+		// The 1.4.5 boss-bag map renderer retains the texture array supplied at construction.
+		// Rebind it after both mod loading and unloading replace TextureAssets.Item.
+		Main.ContentThatNeedsRenderTargets.Remove(Main.ItemMapIconRenderer);
+		Main.ContentThatNeedsRenderTargets.Add(Main.ItemMapIconRenderer = new OutlinedTextureRenderer(TextureAssets.Item));
 
 		//Sets
 		LoaderUtils.ResetStaticMembers(typeof(ItemID));

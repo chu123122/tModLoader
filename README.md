@@ -1,47 +1,29 @@
-# tModLoader, a Terraria modding API [![Build Status](https://travis-ci.org/tModLoader/tModLoader.svg?branch=master)](https://travis-ci.org/tModLoader/tModLoader) [![Discord](https://img.shields.io/discord/103110554649894912.svg?style=flat-square)](https://tmodloader.net/discord)
+# 1.4.5.8 chu123122个人版
 
-tModLoader (TML) is an open-source, community-driven, modification and expansion of the Terraria game that makes it possible to make and play mods. TML expands your Terraria adventures with new content to explore created by the Terraria community! TML allows players to create and play Terraria mods and is designed in such a way so that you can play alone or together with friends, with one mod or with multiple mods: choose to play however you like! It is however required that all your friends also install TML if you want to play together; vanilla users can't play with TML users. Find the instructions below to learn how to install TML.
+基于 [tModLoader](https://github.com/tModLoader/tModLoader) 的个人实验分支，尝试在 Terraria 1.4.5.8 上运行框架和部分迁移模组。主要用途是个人折腾，以及给懂一些 C#、愿意自己排查问题的人提供继续开发的底稿。
 
-**Note**: the code on this GitHub repository will be ahead of the current released version.
+## 使用前请读
 
-<p align="center" >
-<img src="http://i.imgur.com/kdcROYP.png"/>
-</p>
+**个人适配代码全部通过 AI 开发，代码质量低，没有经过系统的人工 Code Review。** 上游 tModLoader 及第三方项目的原有代码当然不属于这部分。
 
-## Instructions
+目前只有局部编译、脚本和实机测试，覆盖很有限。能启动、能加载模组不代表逻辑正确，也不代表性能、多人或长期存档稳定。可能出现崩溃、错误效果、兼容性问题和存档损坏，请先备份并使用独立存档。按现状提供，不保证适用性，不承诺维护、更新或技术支持。
 
-Want to play or create mods? Or do you want to contribute to tModLoader perhaps?
-Click the text that applies to you.
+这不是面向普通玩家的一键游玩整合包，也没有把它做成这种成品的计划。不要期待把任意 1.4.4 模组放进去就能用；模组通常仍需单独移植、编译和测试。有问题请自行判断、修改，或继续使用官方稳定版。
 
-### [Get tModLoader on Steam](https://store.steampowered.com/app/1281930/tModLoader/)
+## 简易包体
 
-### [I am a **player**](https://github.com/tModLoader/tModLoader/wiki/tModLoader-guide-for-players) (Play mods)
+在 [Releases](https://github.com/chu123122/tModLoader/releases) 下载 Windows x64 实验包：
 
-### [I am a **developer**](https://github.com/tModLoader/tModLoader/wiki/tModLoader-guide-for-developers) (Create mods)
+1. 本机安装正版 Steam Terraria 1.4.5.8，启动 Steam。
+2. 解压到可写目录，运行 `Start-Personal.cmd`。包内附 .NET 10 运行时；开发模组还需要另装 SDK。
+3. 启动器使用解压目录下的 `UserData` 独立存档。初始不启用模组，按需自行添加适配版本。
 
-### [I am a **contributor**](https://github.com/tModLoader/tModLoader/wiki/tModLoader-guide-for-contributors) (Help create tModLoader)
+包内不含原版游戏内容、个人存档或迁移模组合集，不会替换 Steam 的安装。它只是方便开发者试跑的框架包，不保证在其他机器上直接可用。其他平台未验证。
 
-## Support us
+## 一点技术说明
 
-First and foremost, TML is largely a community endeavor: built by the community; used by the community. Without all the contributions people in the community have made over the years, TML would not be in the state it is in. TML is a free-to-use modification of the game and will stay that way. However, if you would like to buy us a coffee, or maybe even multiple, you can choose to pledge some money to support us financially. We'd like to kindly express once again that TML was not created to create a profit. All of the core team members continue their best efforts to improve and maintain TML despite their real-life obligations, free of charge or any request from the community.
+- 主要改动在 `patches/tModLoader`，生成的游戏源码不随仓库发布。开发仍沿用上游的源码生成、应用补丁和编译流程；需自行准备原版游戏和 .NET 10 SDK。
+- 本地构建保留 Debug IL 的挂钩布局，通过修改程序集调试标记开启 JIT 优化，另含 Windows FNA3D 着色器采样器修补。工具和来源见 [personal](personal/README.md)。
+- 已有迁移记录属于阶段性证据，不是全面验证报告，也不能作为安全或质量保证。
 
-The preferred method of supporting the core team is by [choosing a pledge through Patreon](https://www.patreon.com/tmodloader). All of the money donated this way is equally shared amongst the core members to those who wish to receive part of it. This truly is the right way to support us financially if you want to do so. By becoming a patron you can receive a special role on our Discord server if desired. You should be able to couple your Discord account to your Patreon account and automatically receive your role.
-
-If you do not want to use a Patreon subscription, you should contact one of the core team members through the Discord server to find an appropriate method of supporting us. Thanks again!
-
-## Get in touch
-
-If you would like to contact us or TML users, it's best to join our [Discord server](https://discord.gg/tmodloader). To use Discord you will need to register a new account on [their website](https://discordapp.com/).
-
-## Contributors
-### Core team
-TML is largely created and maintained by a core team of contributors: **Blushiemagic**, **Chicken-Bones**, **Jopojelly**, **Jofairden**, **Mirsario** and **Solxanich**
-
-This project exists in its current state thanks to all the people who have contributed:
-
-<a href="https://github.com/tModLoader/tModLoader/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=tModLoader/tModLoader&max=900&columns=20" />
-</a>
-
-## License
-TML is licensed under the [MIT license](https://github.com/tModLoader/tModLoader/blob/master/LICENSE)
+本项目与 Re-Logic、tModLoader 官方及模组作者无隶属或担保关系，请不要向上游索取本分支的支持。保留上游 [MIT LICENSE](LICENSE)；第三方组件、游戏及模组的权利和许可分别归其原作者。上游说明存于 [UPSTREAM_README](personal/UPSTREAM_README.md)。

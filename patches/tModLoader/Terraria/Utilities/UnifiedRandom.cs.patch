@@ -1,6 +1,15 @@
 --- src/TerrariaNetCore/Terraria/Utilities/UnifiedRandom.cs
 +++ src/tModLoader/Terraria/Utilities/UnifiedRandom.cs
-@@ -98,6 +_,13 @@
+@@ -87,7 +_,7 @@
+ 		return SeedArray[num] - SeedArray[num2];
+ 	}
+ 
+-	public int Next() => InternalSample();
++	public virtual int Next() => InternalSample();
+ 
+ 	private double GetSampleForLargeRange()
+ 	{
+@@ -98,7 +_,14 @@
  		return ((double)num + 2147483646.0) / 4294967293.0;
  	}
  
@@ -11,10 +20,12 @@
 +	/// <param name="maxValue"></param>
 +	/// <returns></returns>
 +	/// <exception cref="ArgumentOutOfRangeException"></exception>
- 	public int Next(int minValue, int maxValue)
+-	public int Next(int minValue, int maxValue)
++	public virtual int Next(int minValue, int maxValue)
  	{
  		if (minValue > maxValue)
-@@ -110,6 +_,12 @@
+ 			throw new ArgumentOutOfRangeException("minValue", "minValue must be less than maxValue");
+@@ -110,7 +_,13 @@
  		return (int)((long)(GetSampleForLargeRange() * (double)num) + minValue);
  	}
  
@@ -24,6 +35,17 @@
 +	/// <param name="maxValue"></param>
 +	/// <returns></returns>
 +	/// <exception cref="ArgumentOutOfRangeException"></exception>
- 	public int Next(int maxValue)
+-	public int Next(int maxValue)
++	public virtual int Next(int maxValue)
  	{
  		if (maxValue < 0)
+ 			throw new ArgumentOutOfRangeException("maxValue", "maxValue must be positive.");
+@@ -118,7 +_,7 @@
+ 		return (int)(Sample() * (double)maxValue);
+ 	}
+ 
+-	public double NextDouble() => Sample();
++	public virtual double NextDouble() => Sample();
+ 
+ 	public void NextBytes(byte[] buffer)
+ 	{

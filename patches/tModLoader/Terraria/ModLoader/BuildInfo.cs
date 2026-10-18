@@ -33,6 +33,7 @@ public static class BuildInfo
 
 
 	// SteamApps.GetCurrentBetaName(out string betaName, 100) ? betaName :
+	public const string PersonalEditionName = "1.4.5.8 chu123122个人版";
 	public static readonly string versionedName;
 	public static readonly string versionTag;
 	public static readonly string versionedNameDevFriendly;
@@ -60,6 +61,8 @@ public static class BuildInfo
 
 		// Version Tag for ???
 		versionTag = versionedName.Substring("tModLoader ".Length).Replace(' ', '-').ToLower();
+
+		versionedName += " | " + PersonalEditionName;
 
 		// Version name for modders
 		versionedNameDevFriendly = versionedName;

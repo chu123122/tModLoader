@@ -1925,8 +1925,12 @@
  		}
  	}
  
-@@ -5632,6 +_,7 @@
- 			Platform.Get<IWindowService>().SetUnicodeTitle(base.Window, _cachedTitle);
+@@ -5629,9 +_,10 @@
+ 			else
+ 				_cachedTitle = Lang.GetRandomGameTitle();
+ 
+-			Platform.Get<IWindowService>().SetUnicodeTitle(base.Window, _cachedTitle);
++			Platform.Get<IWindowService>().SetUnicodeTitle(base.Window, BuildInfo.PersonalEditionName + " | " + _cachedTitle);
  			if (rand.Next(200) == 0)
  				boulderLogo = true;
 +			Platform.Get<IWindowService>().SetIcon(base.Window); // Added by TML

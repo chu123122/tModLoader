@@ -1,10 +1,11 @@
 --- src/TerrariaNetCore/Terraria/GameContent/CraftingRequests.cs
 +++ src/tModLoader/Terraria/GameContent/CraftingRequests.cs
-@@ -3,6 +_,7 @@
+@@ -3,6 +_,8 @@
  using System.Linq;
  using Terraria.DataStructures;
  using Terraria.Net;
 +using Terraria.ModLoader.IO;
++using Terraria.ModLoader;
  using Terraria.Testing;
  
  namespace Terraria.GameContent;
@@ -83,6 +84,94 @@
  		if (!quickCraft)
  			FakeCursorItem.Add(item);
  
+@@ -175,6 +_,7 @@
+ 				num += CountMatches(req, chest.item, chest.maxItems);
+ 		}
+ 
++		num += CountModdedMaterials(req, chests);
+ 		return num >= req.stack;
+ 	}
+ 
+@@ -207,10 +_,18 @@
+ 			ConsumeItemsFrom(Main.LocalPlayer.inventory, 58, req, ref toConsume, consumedItems);
+ 
+ 		foreach (Chest chest in chests) {
++			// A client may only consume chests it has open (or personal bank chests) directly.
++			// Other nearby chests must be handled by the server through CraftViaRequest.
++			if (Main.netMode == 1 && fromChests && !IsLocallyAccessible(chest))
++				continue;
++
+ 			if (chest.bankChest || fromChests)
+ 				ConsumeItemsFrom(chest, req, ref toConsume, consumedItems);
+ 		}
+ 
++		if (Main.netMode != 2 && toConsume > 0)
++			ConsumeModdedMaterials(req, chests, ref toConsume, consumedItems);
++
+ 		return toConsume;
+ 	}
+ 
+@@ -247,8 +_,8 @@
+ 			}
+ 			else {
+ 				toConsume -= item.stack;
+-				consumedItems?.Add(item);
+-				inventory[i] = new Item();
++				consumedItems?.Add(item.Clone());
++				item.TurnToAir();
+ 			}
+ 
+ 			if (chestIndex >= 0)
+@@ -259,6 +_,49 @@
+ 		}
+ 	}
+ 
++	private static HashSet<Item> GetNativeMaterialReferences(List<Chest> chests)
++	{
++		var seen = new HashSet<Item>(Main.LocalPlayer.inventory.Take(58), ReferenceEqualityComparer.Instance);
++		foreach (var chest in chests)
++			seen.UnionWith(chest.item.Take(chest.maxItems));
++		return seen;
++	}
++
++	private static int CountModdedMaterials(Recipe.RequiredItemEntry req, List<Chest> chests)
++	{
++		int count = 0;
++		var seen = GetNativeMaterialReferences(chests);
++		foreach (var (items, _) in PlayerLoader.GetModdedCraftingMaterials(Main.LocalPlayer))
++			foreach (var item in items)
++				if (seen.Add(item) && req.Matches(item.type))
++					count += item.stack;
++		return count;
++	}
++
++	private static void ConsumeModdedMaterials(Recipe.RequiredItemEntry req, List<Chest> chests, ref int remaining, List<Item> consumedItems)
++	{
++		var seen = GetNativeMaterialReferences(chests);
++		foreach (var (items, callback) in PlayerLoader.GetModdedCraftingMaterials(Main.LocalPlayer)) {
++			int index = -1;
++			foreach (var item in items) {
++				index++;
++				if (!seen.Add(item) || item.IsAir || !req.Matches(item.type))
++					continue;
++				int amount = System.Math.Min(item.stack, remaining);
++				var consumed = item.Clone();
++				consumed.stack = amount;
++				item.stack -= amount;
++				if (item.stack <= 0)
++					item.TurnToAir();
++				callback?.Invoke(item, index);
++				consumedItems?.Add(consumed);
++				remaining -= amount;
++				if (remaining <= 0)
++					return;
++			}
++		}
++	}
++
+ 	public static bool CanCraftFromChest(Chest chest, int whoAmI)
+ 	{
+ 		if (Chest.IsLocked(chest.x, chest.y))
 @@ -279,19 +_,21 @@
  			return;
  		}
