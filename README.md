@@ -20,6 +20,14 @@
 
 包内不含原版游戏内容、个人存档或迁移模组合集，不会替换 Steam 的安装。它只是方便开发者试跑的框架包，不保证在其他机器上直接可用。其他平台未验证。
 
+## 模组
+
+本分支使用的 1.4.5.8 迁移模组按用途整理在 [personal/mods](personal/mods/README.md)，机器可读清单见 [catalog.json](personal/mods/catalog.json)。
+
+- 分类：框架与库、性能与优化、便利与界面、内容与难度、战斗与视觉、联机与同步、汉化与本地化、兼容与修复。
+- **仓库不托管第三方模组源码，也不托管未获再分发许可的安装包。** 多数模组未声明许可证，按“保留所有权利”处理；`Project tRU` 等明确禁止转载。仅少数 MIT 且无未核实第三方依赖的包附带原许可证放在 `personal/mods/tmod/`，其余只提供官方工坊/GitHub/论坛链接。
+- 本机已订阅工坊时，可运行 `personal/mods/fetch-workshop.ps1 -Destination <存档目录>/Mods` 复制对应 `.tmod`；工坊链接表见 [workshop-links.md](personal/mods/workshop-links.md)。
+
 ## 一点技术说明
 
 - 主要改动在 `patches/tModLoader`，生成的游戏源码不随仓库发布。开发仍沿用上游的源码生成、应用补丁和编译流程；需自行准备原版游戏和 .NET 10 SDK。
